@@ -30,7 +30,11 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #include "sver.c (VERSION_STRING, VERSION_GMAKE)"
 #include <cextdecs.h(OLDFILENAME_TO_FILENAME_)> NOLIST
 /* #include <derror.h> NOLIST */
+#ifdef _OSS_HOST
+#include <zsysc> NOLIST
+#else
 #include <zsysc.h> NOLIST
+#endif
 #endif
 
 #include "wmake.h"

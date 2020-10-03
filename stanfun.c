@@ -16,7 +16,11 @@
 #pragma MAPINCLUDE "zsysc.h" = "zsysc"
 #endif
 #include <cextdecs.h(FILE_GETINFOLISTBYNAME_, INTERPRETTIMESTAMP)> NOLIST
+#ifdef _OSS_HOST
+#include <zsysc> NOLIST
+#else
 #include <zsysc.h> NOLIST
+#endif
 
 extern int debug_flag;
 

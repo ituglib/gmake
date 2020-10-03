@@ -213,7 +213,7 @@ ar_scan (archive, function, arg)
 #endif
 #endif
 
-#ifndef _GUARDIAN_HOST
+#ifndef _GUARDIAN_TARGET
 #include <ar.h>
 #else
 #if _TANDEM_ARCH_ == 2

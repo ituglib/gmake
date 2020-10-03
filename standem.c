@@ -16,7 +16,11 @@
 #include <cextdecs.h> NOLIST
 #include <dlaunch.h> NOLIST
 #include <tal.h> NOLIST
+#ifdef _OSS_HOST
+#include <zsysc> NOLIST
+#else
 #include <zsysc.h> NOLIST
+#endif
 /* #include <zspic> NOLIST */
 /* #include <zgrdc> NOLIST */
 #define _XOPEN_SOURCE /* getopt */
