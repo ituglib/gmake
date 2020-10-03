@@ -1,0 +1,90 @@
+# DO NOT DELETE THIS LINE -- make depend uses it
+
+# Set up environment to use product compiler.
+export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\L17.02
+
+# Set the systype flag.
+SYSTYPE_FLAG =  -Wsystype=oss
+
+# Set up compiler and its flags
+CC="${COMP_ROOT}"/usr/bin/c89
+CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wallow_cplusplus_comments -Wcolumns=79 -Wextensions -g  -Wnowarn=1506,161 -Woptimize=1 -I ../
+GMAKE_EXE=gmake
+LFLAGS=$(SYSTYPE_FLAG) 
+
+# List of object files
+objects = salloca.o  \
+          sar.o \
+          sarscan.o \
+          scommnd.o \
+          sdefalt.o \
+          sdir.o \
+          sexpand.o \
+          sfile.o \
+          sfnmach.o \
+          sfunctn.o \
+          sgetlod.o \
+          sgetop1.o \
+          sgetopt.o \
+          sglob.o \
+          simplic.o \
+          sjob.o \
+          smain.o \
+          smisc.o \
+          sremake.o \
+          sread.o \
+          sremstb.o \
+          srule.o \
+          ssignam.o \
+          standem.o \
+          stanfun.o \
+          svariab.o \
+          sverson.o \
+          svpath.o
+
+# Link line
+$(GMAKE_EXE) : $(objects)
+	$(CC) $(LFLAGS) -o $(GMAKE_EXE) $(objects)
+
+default : $(GMAKE_EXE)
+
+# Compilation line
+./%.o: ../%.c
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+# Dependency details
+salloca.o : ../wconfig.h
+sar.o     : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wdep.h ../wfnmach.h
+sarscan.o : ../wmake.h ../wconfig.h ../wsignam.h 
+scommnd.o : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wvariab.h ../wjob.h ../wcommnd.h
+sdefalt.o : ../wmake.h ../wconfig.h ../wsignam.h ../wrule.h ../wdep.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h
+sdir.o    : ../wmake.h ../wconfig.h ../wsignam.h ../wglob.h
+sexpand.o : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h ../wrule.h
+sfile.o   : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h
+sfnmach.o : ../wconfig.h ../wfnmach.h
+sfunctn.o : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wvariab.h ../wdep.h ../wjob.h ../wcommnd.h
+sgetlod.o : ../wconfig.h
+sgetop1.o : ../wconfig.h ../wgetopt.h
+sgetopt.o : ../wconfig.h ../wgetopt.h
+sglob.o   : ../wconfig.h ../wfnmach.h ../wglob.h
+simplic.o : ../wmake.h ../wconfig.h ../wsignam.h ../wrule.h ../wdep.h ../wfildef.h
+sjob.o    : ../wmake.h ../wconfig.h ../wsignam.h ../wjob.h ../wfildef.h ../wcommnd.h ../wvariab.h
+smain.o   : ../sver.c ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wvariab.h ../wjob.h ../wcommnd.h ../wgetopt.h
+smisc.o   : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h
+sread.o   : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wjob.h ../wcommnd.h ../wdep.h
+sremake.o : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h ../wrule.h ../wglob.h
+sremstb.o : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wjob.h ../wcommnd.h
+srule.o   : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h ../wrule.h
+ssignam.o : ../wconfig.h ../wsignam.h
+standem.o : ../wmake.h
+stanfun.o : ../wmake.h
+svariab.o : ../wmake.h ../wconfig.h ../wsignam.h ../wdep.h ../wfildef.h ../wjob.h ../wcommnd.h ../wvariab.h
+sverson.o : ../wconfig.h
+svpath.o  : ../wmake.h ../wconfig.h ../wsignam.h ../wfildef.h ../wvariab.h
+
+# Cleaning related.
+.PHONY : clean
+clean :
+	rm -f $(GMAKE_EXE) $(objects)
+
+clobber: clean

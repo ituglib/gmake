@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<externalSettings/>
+				<extensions>
+					<extension id="com.hp.nsdee.devp.core.NONSTOP_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="com.hp.nsdee.devp.core.parsers.CParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="com.hp.nsdee.devp.core.parsers.CobParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="com.hp.nsdee.devp.core.parsers.TalParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173.296272076" name="/" resourcePath="">
+						<toolChain id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.1289684435" name="C-C++ TNS-X Tools" superClass="nsdee.managedbuild.toolchain.ccpp.tnsx.base" unusedChildren="nsdee.managedbuild.ccpp.tool.c.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.c.sqlmx.pre.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.compiler.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.cpp.linker.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmx.pre.tnsx.base;nsdee.managedbuild.ccpp.tool.c.compiler.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmx.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.c.sqlmx.tnsx.base">
+							<targetPlatform archList="all" binaryParser="com.hp.nsdee.devp.core.NONSTOP_ELF" id="nsdee.managedbuild.ccpp.target.platform.tnsx.base.977718110" name="Debug Platform" osList="win32" superClass="nsdee.managedbuild.ccpp.target.platform.tnsx.base"/>
+							<builder customBuilderProperties="nsdee.compRoot.default=[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.targetSystype=oss|nsdee.posixBin=C:\\cygwin64\\bin|nsdee.compRoot=+[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.setCompRootAndPath=true|nsdee.posixBin.default=C:\\cygwin64\\bin|nsdee.preDeployTarget=|nsdee.deployTarget=deploy|nsdee.postDeployTarget=|" id="nsdee.managedbuild.ccpp.target.builder.tnsx.base.1214664279" managedBuildOn="false" name="NonStop Make Builder.Default" superClass="nsdee.managedbuild.ccpp.target.builder.tnsx.base"/>
+							<tool id="nsdee.managedbuild.ccpp.tool.c.compiler.tnsx.base.327320073" name="C Compiler (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.c.compiler.tnsx.base">
+								<inputType id="nsdee.managedbuild.tool.c.compiler.input.540347380" superClass="nsdee.managedbuild.tool.c.compiler.input"/>
+							</tool>
+							<tool id="nsdee.managedbuild.ccpp.tool.deploy.tnsx.base.1538426960" name="Deploy Tool" superClass="nsdee.managedbuild.ccpp.tool.deploy.tnsx.base"/>
+							<tool id="nsdee.managedbuild.ccpp.tool.cobol.compiler.tnsx.base.2041791909" name="COBOL Compiler (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.cobol.compiler.tnsx.base">
+								<inputType id="nsdee.managedbuild.tool.cobol.compiler.input.1511457816" superClass="nsdee.managedbuild.tool.cobol.compiler.input"/>
+							</tool>
+							<tool id="nsdee.managedbuild.ccpp.tool.cpp.compiler.tnsx.base.1193382528" name="C++ Compiler (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.cpp.compiler.tnsx.base">
+								<inputType id="nsdee.managedbuild.tool.cpp.compiler.input.1769038904" superClass="nsdee.managedbuild.tool.cpp.compiler.input"/>
+							</tool>
+							<tool id="nsdee.managedbuild.ccpp.tool.tal.compiler.tnsx.base.149311923" name="pTAL Compiler (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.tal.compiler.tnsx.base">
+								<inputType id="nsdee.managedbuild.tool.tal.compiler.input.843440779" superClass="nsdee.managedbuild.tool.tal.compiler.input"/>
+							</tool>
+							<tool id="nsdee.managedbuild.ccpp.tool.c.linker.tnsx.base.217937959" name="C Linker (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.c.linker.tnsx.base"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="GMake.null.304708429" name="GMake"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+</cproject>
