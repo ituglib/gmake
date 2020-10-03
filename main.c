@@ -23,11 +23,11 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #else
 #define NOLIST nolist
 #ifdef _GUARDIAN_HOST
-#pragma MAPINCLUDE "sver.c" = "sverc"
+#pragma MAPINCLUDE "ver.c" = "verc"
 #pragma MAPINCLUDE "cextdecs.h" = "cextdecs"
 #pragma MAPINCLUDE "zsysc.h" = "zsysc"
 #endif
-#include "sver.c (VERSION_STRING, VERSION_GMAKE)"
+#include "ver.c (VERSION_STRING, VERSION_GMAKE)"
 #include <cextdecs.h(OLDFILENAME_TO_FILENAME_)> NOLIST
 /* #include <derror.h> NOLIST */
 #ifdef _OSS_HOST
