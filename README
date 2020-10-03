@@ -1,0 +1,167 @@
+
+---------
+Contents:
+---------
+
+*. List of files.
+*. Details of the above files.
+*. BUILD procedures:
+*.   TNS/E guardian gmake build in guardian host.
+*.   TNS/X guardian gmake build in guardian host.
+*.   TNS/X or TNS/E : guardian or oss : gmake build in windows.
+*. Note.
+
+--------------
+List of files:
+--------------
+
+1. bldgmak
+2. bldgmake
+3. makein
+4. sallocac
+5. sarc
+6. sarscanc
+7. scommndc
+8. sdefaltc
+9. sdirc
+10. sexpandc
+11. sfilec
+12. sfnmachc
+13. sfunctnc
+14. sgetlodc
+15. sgetop1c
+16. sgetoptc
+17. sglobc
+18. simplicc
+19. sjobc
+20. smainc
+21. smiscc
+22. sreadc
+23. sremakec
+24. sremstbc
+25. srulec
+26. ssignamc
+27. standemc
+28. stanfunc
+29. svariabc
+30. sverc
+31. sversonc
+32. svpathc
+33. wcommndh
+34. wconfigh
+35. wdeph
+36. wearh
+37. wfildefh
+38. wfnmachh
+39. wgetopth
+40. wglobh
+41. wjobh
+42. wmakeh
+43. wruleh
+44. wsignamh
+45. wvariabh
+46. wxarh
+
+---------------------------
+Details of the above files:
+---------------------------
+
+*. bldgmak:
+   TACL macro file to build TNS/E, TNS/X guardian gmake in guardian host.
+
+*. bldgmake:
+   SHELL script file to build TNS/E guardian/oss, TNS/X guardian/oss gmake 
+   in oss host.
+   
+*. makein:
+   MAKEFILE input. This file is used by bldgmake shell script to prepare the 
+   required Makefile to perform the build in oss host.
+
+*. s* files:
+   Source files that is used to build gmake.
+
+*. w* files:
+   Header files that is used to build gmake.
+
+-----------------
+BUILD procedures:
+-----------------
+
+TNS/E guardian gmake build in guardian host:
+--------------------------------------------
+
+1. Place the files in a guardian subvolume. Ex: $disc.subvol. There are two 
+ways (as given below) to get the files in place.
+
+  1.1. unpak method:
+    unpak srcpak,$*.*.*,listall, myid, vol $disc.subvol
+  
+  1.2. ftp method
+    *. unzip the src.zip file in pc.
+    *. Edit ftp_files.sh to set the nonstop server name, volume and subvolume
+    *. Make sure ftp_files.sh is in unix format. Use dos2unix if required.
+    *. Execute ftp_files.sh script in cygwin: ./ftp_files.sh
+    
+2. Load the bldgmak TACL macro file.
+     volume $disc.subvol
+     load bldgmak
+
+3. Invoke bldgemak macro:
+     volume $disc.subvol
+     bldegmak
+
+4. This should produce a file named GMAKEE. This is the gmake executable.
+
+TNS/X guardian gmake build in guardian host:
+--------------------------------------------
+
+1-2: First two steps as mentioned in section 
+     "TNS/E guardian gmake build in guardian host" above.
+
+3. Invoke bldgxmak macro:
+     volume $disc.subvol
+     bldxgmak
+
+4. This should produce a file named GMAKEX. This is the gmake executable.
+
+TNS/X or TNS/E : guardian or oss : gmake build in windows:
+----------------------------------------------------------
+
+1. Unzip the src.zip file in a folder in pc.
+
+2. Open cygwin. In cygwin do the following steps:
+
+3. Make sure the following files are in unix format. bldgmake, makein
+   Use dos2unix if required on the above files.
+
+4. Edit the makein file to set COMP_ROOT approporiately.
+   Ex: C:\Program Files (x86)\HPE NonStop\J06.21 for TNS/E
+       C:\Program Files (x86)\HPE NonStop\L17.02 for TNS/X
+
+5. Execute bldgmake to perform the build.
+   TNS/E guardian target gmake: ./bldgmake -h grde
+   TNS/X guardian target gmake: ./bldgmake -h grdx
+   TNS/E oss target gmake: ./bldgmake -h osse
+   TNS/X oss target gmake: ./bldgmake -h ossx
+
+6. Output file (gmake) location:
+   TNS/E guardian target gmake: ./grde/gmake
+   TNS/X guardian target gmake:./grdx/gmake
+   TNS/E oss target gmake: ./osse/gmake
+   TNS/X oss target gmake: ./ossx/gamke
+
+-----
+Note:
+----- 
+
+1. We don't support/release ossx or osse gmake. For the completness 
+purpose it is mentioned here. If at all this should be made available in oss 
+environment some source changes are needed. Example: smain.c has reference to 
+guardian procedure get_max_assign_msg_ordinal. standem.c has reference to 
+get_max_assign_msg_ordinal.
+
+2. sarscan.c file uses ar.h header which is available only in cross compilers 
+whereas the same is not available in guardian or oss host. Currently a copy 
+of the ar.h header from cross compilers (J06.23/L19.08) is being used as 
+wear.h and wxar.h in place of ar.h. To update these headers pick up them from 
+the latest cross compilers.

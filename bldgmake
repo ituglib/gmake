@@ -1,0 +1,159 @@
+#! /bin/sh
+
+# Display commands and their arguments as they are executed.
+#set -x
+
+# file "bldgmake"  -- Builds the TNS/E, TNS/X gmake
+
+usage="Usage: bldgmake [-h grde|grdx|osse|ossx] [-ncb|--no-clean-build]"
+
+# -h host       Host machine that gmake being built will run on.
+#               The options are:
+#
+#                  grde
+#                  grdx (default)
+#                  osse
+#                  ossx
+
+# -ncb
+# -no-clean-build  
+#
+#   Perform incremental (no clean) build i.e. build only the the object/target files 
+#   whose corresponding/dependent source file(s) is(are) modified.
+
+is_xpf_host=false
+# By default perform clean build. But with this option enabled, do increment build.
+no_clean_build=false
+
+# Get options
+while [ $# -gt 0 ]
+do
+  case $1 in
+    -h )
+        if [ $# -lt 2 ]
+        then
+          echo $usage
+          exit 1
+        fi
+        shift
+        gmake_host=$1
+        shift
+        ;;
+     -ncb | --no-clean-build )
+        no_clean_build=true
+        shift
+        ;;
+     * )
+        echo $usage
+        exit 1
+        ;;
+  esac
+done
+
+case $gmake_host in
+   grdx |  ossx )
+    is_xpf_host=true
+    ;;
+
+   grde | osse )
+    ;;
+
+  * )
+    echo Unknown gmake host option: $gmake_host
+    exit
+    ;;
+esac
+
+mkdir -p $gmake_host
+cd $gmake_host
+cp ../makein Makefile.0
+
+# Fix up the Makefiles
+# Erase custom markers for our machine/host.  Those lines will be retained.
+
+case $gmake_host in
+  osse | ossx)
+    if [ $no_clean_build == false ]
+    then
+      rm -f *.o
+    fi
+    echo Customizing Makefile for targetting for OSS
+    # Erase OSS custom markers "<OSS> ".
+    sed 's/^<OSS> //' <  Makefile.0 >   Makefile.1
+    ;;
+  grde | grdx)
+    if [ $no_clean_build == false ]
+    then
+      rm -f *.o
+    fi
+    echo Customizing Makefile for targetting for Guardian
+    # Erase GRD custom markers "<GRD> ".
+    sed 's/^<GRD> //' <  Makefile.0 > Makefile.1
+    ;;
+  *)
+    echo Invalid gmake_host: $gmake_host
+    exit
+    ;;
+esac
+
+
+if [ $is_xpf_host == true ]
+then
+  sed 's/^<PRODUCTX> //' <      Makefile.1 >     Makefile.2
+else
+  sed 's/^<PRODUCTE> //' <      Makefile.1 >     Makefile.2
+fi
+
+# Replace <cmd> markers with tabs.
+sed 's/<cmd> /^/' <     Makefile.2 | tr '^' '\011' >     Makefile.3
+
+# Delete all remaining lines with custom markers.
+# Those lines are for some other machine.
+sed '/^</d' <     Makefile.3 >     Makefile.4
+
+if [ $no_clean_build == true ]
+then
+# "no clean build" is mentioned explicitly.
+# So check the difference between generated Makefile and previous one (Makefile).
+# If different, overwrite the previous Makefile. If not, don't replace it.
+  diff Makefile.4 Makefile
+  if [ $? != 0 ]
+  then
+    echo "Current generated Makefile differs from previously generated Makefile."
+    echo "So considering the new currently generated Makefile for this build."
+    echo "Hence this will be a full clean build."
+    no_clean_build=false
+    cp Makefile.4 Makefile
+  else
+    echo "Current generated Makefile is same as previously generated Makefile."
+    echo "So continuing to use the previously generated Makefile."
+    echo "Since no clean build option is mentioned explicitly this will be a incremental build."
+    echo "Meaning not a clean build."
+    no_clean_build=true
+  fi
+else
+# "no clean build" is not mentioned explicitly. So go ahead with it (clean build).
+# Don't bother to check whether the generated Makefile is same as previous one.
+# Overwrite the previous Makefile.
+  cp Makefile.4 Makefile
+fi
+
+# Clean up all the temporary Makefiles
+rm -f     Makefile.*
+
+# Make all the components
+
+echo ""
+echo "##################"
+echo "Building gmake ..."
+
+# Do the build (incremental or full clean build).
+if [ $no_clean_build == true ]
+then
+  echo "Doing make with \"default\" target. This is a incremental build. Meaning not a clean build."
+else
+  echo "Doing clean make. Meaning a clean build."
+  make -f Makefile clean
+fi
+
+make -f Makefile

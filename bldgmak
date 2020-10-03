@@ -1,0 +1,95 @@
+==============================================================================
+?SECTION cmnset ROUTINE
+  #PUSH :^ssv0
+  #SET :^ssv0 "[#defaults]"
+  #PUSH :^ssv1
+  #SET :^ssv1 "$SYSTEM.SYSTEM"
+  #PUSH :^ssv2
+  #SET :^ssv2 "$SYSTEM.ZTCPIP"
+  #PUSH :^ssv3
+  #SET :^ssv3 "$SYSTEM.ZSYSDEFS"  
+==============================================================================
+?SECTION Compile_C ROUTINE
+  #FRAME
+  #PUSH :^sf :^of
+  #IF [#ARGUMENT /VALUE :^sf/ WORD]
+  #IF [#ARGUMENT /VALUE :^of/ WORD]
+  FUP PURGE ![:^of]!
+  cmnset
+  $system.system.ccomp /in [:^sf]/[:^of];&
+  ssv0 [^ssv0],ssv1 [^ssv1],ssv2 [^ssv2],ssv3 [^ssv3],&
+  define INCLUDEDIR 0, define LIBDIR 0, define _POSIX_SOURCE, &
+  define HAVE_CONFIG_H, ALLOW_CPLUSPLUS_COMMENTS, COLUMNS 79, &
+  EXTENSIONS, SYMBOLS,  NOWARN(1506,161) ,  OPTIMIZE 0, suppress
+  [#IF [:_COMPLETION:COMPLETIONCODE] > 1 |THEN|
+    #OUTPUT *** Error during compilation
+    #OUTPUT Completion code = [:_COMPLETION:COMPLETIONCODE]
+    #UNFRAME
+    #RETURN
+  ]
+  #UNFRAME
+==============================================================================
+?SECTION bldgmak ROUTINE
+  #FRAME
+  Compile_C SALLOCAC NALLOCAC
+  Compile_C SARC NARC
+  Compile_C SARSCANC NARSCANC
+  Compile_C SCOMMNDC NCOMMNDC
+  Compile_C SDEFALTC NDEFALTC 
+  Compile_C SDIRC NDIRC
+  Compile_C SEXPANDC NEXPANDC
+  Compile_C SFILEC NFILEC
+  Compile_C SFNMACHC NFNMACHC
+  Compile_C SFUNCTNC NFUNCTNC
+  Compile_C SGETLODC NGETLODC
+  Compile_C SGETOP1C NGETOP1C
+  Compile_C SGETOPTC NGETOPTC
+  Compile_C SGLOBC NGLOBC
+  Compile_C SIMPLICC NIMPLICC
+  Compile_C SJOBC NJOBC
+  Compile_C SMAINC NMAINC
+  Compile_C SMISCC NMISCC
+  Compile_C SREADC NREADC
+  Compile_C SREMAKEC NREMAKEC
+  Compile_C SREMSTBC NREMSTBC
+  Compile_C SRULEC NRULEC
+  Compile_C SSIGNAMC NSIGNAMC
+  Compile_C STANDEMC NTANDEMC
+  Compile_C STANFUNC NTANFUNC
+  Compile_C SVARIABC NVARIABC
+  Compile_C sversonc nversonc
+  Compile_C svpathc nvpathc
+
+  #UNFRAME
+  #RETURN
+==============================================================================
+?SECTION bldxgmak ROUTINE
+  #FRAME  
+  bldgmak
+  $system.system.xld -o gmakex nallocac narc narscanc ncommndc &
+  ndefaltc ndirc nexpandc nfilec nfunctnc ngetlodc ngetop1c &
+  ngetoptc nimplicc njobc nmainc nmiscc nreadc nremakec &
+  nremstbc nrulec nsignamc ntandemc ntanfunc nvariabc &
+  nversonc nvpathc nglobc nfnmachc -set highpin on &
+  -set highrequestor on -set inspect on -L $system.sys00 &
+  -L $system.system -l cre -l crtl -l ossk -l ossf -l sec -l i18n &
+  -l icnv -l osse -l inet -l ossh -l ossc $system.system.ccpmainx
+
+  #UNFRAME
+  #RETURN
+==============================================================================
+?SECTION bldegmak ROUTINE
+  #FRAME
+  bldgmak
+  $system.system.eld -o gmakee nallocac narc narscanc ncommndc &
+  ndefaltc ndirc nexpandc nfilec nfunctnc ngetlodc ngetop1c &
+  ngetoptc nimplicc njobc nmainc nmiscc nreadc nremakec &
+  nremstbc nrulec nsignamc ntandemc ntanfunc nvariabc &
+  nversonc nvpathc nglobc nfnmachc -set highpin on &
+  -set highrequestor on -set inspect on -L $system.sys00 &
+  -L $system.system -l cre -l crtl -l ossk -l ossf -l sec -l i18n &
+  -l icnv -l osse -l inet -l ossh -l ossc $system.system.ccplmain
+
+  #UNFRAME
+  #RETURN
+==============================================================================
