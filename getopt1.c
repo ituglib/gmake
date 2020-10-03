@@ -20,10 +20,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
 USA.  */
 
 #ifdef HAVE_CONFIG_H
-#include <wconfig.h>
+#include <config.h>
 #endif
 
-#include "wgetopt.h"
+#include "getopt.h"
 
 #if !defined (__STDC__) || !__STDC__
 /* This is a separate conditional since some stdc systems

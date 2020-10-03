@@ -16,13 +16,13 @@ You should have received a copy of the GNU General Public License
 along with GNU Make; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "wmake.h"
+#include "make.h"
 
 #ifndef NO_ARCHIVES
 
-#include "wfildef.h"
-#include "wdep.h"
-#include <wfnmach.h>
+#include "filedef.h"
+#include "dep.h"
+#include <glob/fnmatch.h>
 
 /* Defined in arscan.c.  */
 extern long int ar_scan PARAMS ((char *archive, long int (*function) (),

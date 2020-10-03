@@ -18,7 +18,7 @@
    Boston, MA 02111-1307, USA.  */
 
 #ifdef HAVE_CONFIG_H
-#include <wconfig.h>
+#include <config.h>
 #endif
 
 #include <stdio.h>
@@ -54,7 +54,7 @@
 #define const
 #endif
 
-#include "wsignam.h"
+#include "signame.h"
 
 #ifndef HAVE_SYS_SIGLIST
 /* There is too much variation in Sys V signal numbers and names, so

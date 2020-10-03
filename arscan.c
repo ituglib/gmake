@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "wmake.h"
+#include "make.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -217,9 +217,9 @@ ar_scan (archive, function, arg)
 #include <ar.h>
 #else
 #if _TANDEM_ARCH_ == 2
-#include "wear.h" /* TNS/E ar.h */
+#include "ar.nse.h" /* TNS/E ar.h */
 #elif _TANDEM_ARCH_ == 3
-#include "wxar.h" /* TNS/X ar.h */
+#include "ar.nsx.h" /* TNS/X ar.h */
 #endif /* _TANDEM_ARCH_ */
 #endif /* _GUARDIAN_HOST */
 

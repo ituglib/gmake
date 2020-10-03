@@ -17,7 +17,7 @@
    Boston, MA 02111-1307, USA.  */
 
 #if HAVE_CONFIG_H
-# include <wconfig.h>
+# include <config.h>
 #endif
 
 /* Enable GNU extensions in fnmatch.h.  */
@@ -27,7 +27,7 @@
 
 #include <errno.h>
 #ifdef __TANDEM
-#include "wfnmach.h"
+#include "glob/fnmatch.h"
 #else
 #include <fnmatch.h>
 #endif

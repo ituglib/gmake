@@ -18,20 +18,20 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 #include <assert.h>
 
-#include "wmake.h"
-#include "wdep.h"
-#include "wfildef.h"
-#include "wjob.h"
-#include "wcommnd.h"
-#include "wvariab.h"
-#include "wrule.h"
+#include "make.h"
+#include "dep.h"
+#include "filedef.h"
+#include "job.h"
+#include "command.h"
+#include "variable.h"
+#include "rule.h"
 
 /* This is POSIX.2, but most systems using -DPOSIX probably don't have it.  */
 #if defined(HAVE_GLOB_H) || defined(__TANDEM)
 #ifdef _GUARDIAN_HOST
-#include "wglob.h"
+#include "glob/glob.h"
 #else
-#include <wglob.h>
+#include <glob/glob.h>
 #endif
 #else
 #include "glob/glob.h"

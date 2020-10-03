@@ -16,11 +16,11 @@ You should have received a copy of the GNU General Public License
 along with GNU Make; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "wmake.h"
-#include "wfildef.h"
-#include "wjob.h"
-#include "wcommnd.h"
-#include "wdep.h"
+#include "make.h"
+#include "filedef.h"
+#include "job.h"
+#include "command.h"
+#include "dep.h"
 #include <assert.h>
 
 #ifdef HAVE_FCNTL_H

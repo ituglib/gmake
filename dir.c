@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with GNU Make; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "wmake.h"
+#include "make.h"
 
 #ifdef  HAVE_DIRENT_H
 # include <dirent.h>
@@ -971,9 +971,9 @@ print_dir_data_base ()
 /* Hooks for globbing.  */
 
 #ifdef _GUARDIAN_HOST
-#include "wglob.h"
+#include "glob/glob.h"
 #else
-#include <wglob.h>
+#include <glob/glob.h>
 #endif
 
 /* Structure describing state of iterating through a directory hash table.  */

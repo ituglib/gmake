@@ -31,7 +31,7 @@ USA.  */
 #endif
 
 #ifdef HAVE_CONFIG_H
-#include <wconfig.h>
+#include <config.h>
 #endif
 
 #if !defined (__STDC__) || !__STDC__
@@ -110,7 +110,7 @@ USA.  */
    GNU application programs can use a third alternative mode in which
    they can distinguish the relative order of options and other arguments.  */
 
-#include "wgetopt.h"
+#include "getopt.h"
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,

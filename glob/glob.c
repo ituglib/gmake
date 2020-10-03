@@ -21,7 +21,7 @@
 #endif
 
 #ifdef  HAVE_CONFIG_H
-# include <wconfig.h>
+# include <config.h>
 #endif
 
 /* Enable GNU extensions in glob.h.  */
@@ -265,9 +265,9 @@ extern char *alloca ();
 # undef FNM_PERIOD
 #endif
 #ifdef _GUARDIAN_HOST
-#include "wfnmach.h"
+#include "glob/fnmatch.h"
 #else
-#include <wfnmach.h>
+#include <glob/fnmatch.h>
 #endif
 
 /* Some system header files erroneously define these.
@@ -283,9 +283,9 @@ extern char *alloca ();
 # undef GLOB_PERIOD
 #endif
 #ifdef _GUARDIAN_HOST
-#include "wglob.h"
+#include "glob/glob.h"
 #else
-#include <wglob.h>
+#include <glob/glob.h>
 #endif
 
 static

@@ -58,19 +58,19 @@ ftp -n -i ${NSK_HOST} <<FTP_EOF
     put svariab.c svariabc,101,14,28
     put sverson.c sversonc,101,14,28
     put svpath.c svpathc,101,14,28
-    put wcommnd.h wcommndh,101,14,28
-    put wconfig.h wconfigh,101,14,28
-    put wdep.h wdeph,101,14,28
+    put command.h wcommndh,101,14,28
+    put config.h wconfigh,101,14,28
+    put dep.h wdeph,101,14,28
     put wear.h wearh,101,14,28
-    put wfildef.h wfildefh,101,14,28
-    put wfnmach.h wfnmachh,101,14,28
-    put wgetopt.h wgetopth,101,14,28
-    put wglob.h wglobh,101,14,28
-    put wjob.h wjobh,101,14,28
-    put wmake.h wmakeh,101,14,28
-    put wrule.h wruleh,101,14,28
-    put wsignam.h wsignamh,101,14,28
-    put wvariab.h wvariabh,101,14,28
+    put filedef.h wfildefh,101,14,28
+    put glob/fnmatch.h wfnmachh,101,14,28
+    put getopt.h wgetopth,101,14,28
+    put glob/glob.h wglobh,101,14,28
+    put job.h wjobh,101,14,28
+    put make.h wmakeh,101,14,28
+    put rule.h wruleh,101,14,28
+    put signame.h wsignamh,101,14,28
+    put variable.h wvariabh,101,14,28
     put wxar.h wxarh,101,14,28
    bye
 FTP_EOF

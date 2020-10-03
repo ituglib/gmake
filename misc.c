@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with GNU Make; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-#include "wmake.h"
-#include "wdep.h"
+#include "make.h"
+#include "dep.h"
 
 
 /* Compare strings *S1 and *S2.

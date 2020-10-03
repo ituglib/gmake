@@ -24,7 +24,7 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 /* We use <config.h> instead of "config.h" so that a compilation
    using -I. -I$srcdir will use ./config.h rather than $srcdir/config.h
    (which it would do because make.h was found in $srcdir).  */
-#include <wconfig.h>
+#include <config.h>
 #undef  HAVE_CONFIG_H
 #define HAVE_CONFIG_H
 
@@ -103,7 +103,7 @@ extern char *sys_siglist[];
 #endif
 
 #if !defined (HAVE_SYS_SIGLIST) || !defined (HAVE_STRSIGNAL)
-#include "wsignam.h"
+#include "signame.h"
 #endif
 
 /* Some systems do not define NSIG in <signal.h>.  */

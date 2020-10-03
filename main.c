@@ -37,13 +37,13 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #endif
 #endif
 
-#include "wmake.h"
-#include "wdep.h"
-#include "wfildef.h"
-#include "wvariab.h"
-#include "wjob.h"
-#include "wcommnd.h"
-#include "wgetopt.h"
+#include "make.h"
+#include "dep.h"
+#include "filedef.h"
+#include "variable.h"
+#include "job.h"
+#include "command.h"
+#include "getopt.h"
 #include <assert.h>
 #ifdef _AMIGA
 #   include <dos/dos.h>

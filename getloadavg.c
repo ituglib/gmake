@@ -74,7 +74,7 @@
 
 /* This should always be first.  */
 #ifdef HAVE_CONFIG_H
-# include <wconfig.h>
+# include <config.h>
 #endif
 
 #ifdef _GUARDIAN_HOST
