@@ -833,11 +833,15 @@ ar_name_equal (const char *name, const char *mem, int truncated)
       /* TRUNCATED should never be set on this system.  */
       abort ();
 #else
+#ifdef _GUARDIAN_TARGET
+      return !strcasecmp (name, mem);
+#elif !defined (__hpux) && !defined (cray)
       struct ar_hdr hdr;
 
-#if !defined (__hpux) && !defined (cray)
       return strneq (name, mem, sizeof (hdr.ar_name) - 1);
 #else
+      struct ar_hdr hdr;
+
       return strneq (name, mem, sizeof (hdr.ar_name) - 2);
 #endif /* !__hpux && !cray */
 #endif /* !AIAMAG */
