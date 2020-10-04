@@ -6,7 +6,7 @@ SYSTYPE_FLAG = -Wsystype=guardian -Wtarget=tns/x
 # Set up compiler and its flags
 CC=c99
 INCLUDES=-I. -I./glob -I/G/system/zsysdefs
-CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wallow_cplusplus_comments -Wextensions -g  -Wnowarn=1506,161 -Woptimize=1 $(INCLUDES) 
+CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wextensions -g  -Wnowarn=1506,161 -O2 $(INCLUDES) 
 GMAKE_EXE=gmake
 LDFLAGS=$(SYSTYPE_FLAG) -lrld
 
