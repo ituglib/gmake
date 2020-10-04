@@ -56,7 +56,7 @@ pipeline {
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
                         'DEST=/G/data27/randall']) {
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=${DEST}/gmake"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSX.OSS GMAKE_EXE=${DEST}/gmake"
                 }
             }
         }
