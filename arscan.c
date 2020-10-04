@@ -334,7 +334,15 @@ ar_scan (const char *archive, ar_member_func_t function, const void *varg)
 
 #ifndef WINDOWS32
 # if !defined (__ANDROID__) && !defined (__BEOS__)
-#  include <ar.h>
+#  ifdef __TANDEM
+#   ifdef TNS_E_TARGET_
+#    include <ar.nse.h>
+#   else
+#    include <ar.nsx.h>
+#   endif
+#  else
+#   include <ar.h>
+#  endif
 # else
    /* These platforms don't have <ar.h> but have archives in the same format
     * as many other Unices.  This was taken from GNU binutils for BeOS.

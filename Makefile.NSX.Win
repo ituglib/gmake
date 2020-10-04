@@ -11,7 +11,7 @@ CC=c99
 INCLUDES=-I. -I./glob -I/G/system/zsysdefs
 CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wallow_cplusplus_comments -Wextensions -g  -Wnowarn=1506,161 -Woptimize=1 $(INCLUDES) 
 GMAKE_EXE=gmake
-LDFLAGS=$(SYSTYPE_FLAG) 
+LDFLAGS=$(SYSTYPE_FLAG) -lrld
 
 # List of object files
 objects = alloca.o  \
