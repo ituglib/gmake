@@ -26,16 +26,15 @@
 #define _XOPEN_SOURCE /* getopt */
 #include <unistd.h> NOLIST /* getopt */
 
+#include "makeint.h"
+#include "tandem.h"
 #include "debug.h"
 
 #define PROCDEATH_PREMATURE 3 /* Proc Calls App. C Completion Codes: file? */
 
 /* capture calls to unsupported functions */
 
-int vfork() { DEBUG(); return -1; }
-
 #ifndef HAVE_CONFIG_H /* for testing without gmake */
-int launch_proc(char *argv[]);
 
 int main(int argc, char *argv[])
 {
@@ -121,7 +120,7 @@ int main(int argc, char *argv[])
   /monitor launchee for completion to get it's return code.
  */
 
-int launch_proc(char *argv[])
+int launch_proc(char *argv[], char *envp[])
 {
    process_launch_parms_def plist = P_L_DEFAULT_PARMS_;
    short error, errordet, olistlen, filenum, rc, slen, plen, num, index;

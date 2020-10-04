@@ -369,10 +369,10 @@
 #define PACKAGE "make"
 
 /* Version number of package */
-#define VERSION "4.1"
+#define VERSION "4.1g"
 
 /* Build host information. */
-#if defined (TNS_E_TARGET_)
+#ifdef _TNS_E_TARGET
 #define MAKE_HOST "nse-tandem-nsk"
 #else
 #define MAKE_HOST "nsx-tandem-nsk"
