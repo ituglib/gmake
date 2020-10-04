@@ -1,7 +1,6 @@
 #ifdef __TANDEM
 #define NOLIST nolist
 #define _XOPEN_SOURCE
-#endif
 #include <stdio.h> NOLIST
 #include <stdlib.h> NOLIST
 #include <string.h> NOLIST
@@ -105,6 +104,9 @@ int stat(const char *pathname, struct stat *st)
 
   return rc ? -1 : 0;
 }
+#else
+static void noop(void) {}
+#endif
 /*===========================================================================*/
 #pragma page "T0593 GUARDIAN GNU Make- stanfunc Change Descriptions"
 /*===========================================================================*/

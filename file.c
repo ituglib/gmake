@@ -17,8 +17,8 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "makeint.h"
 
 #include <assert.h>
-#ifdef __TANDEM
 #include <time.h>
+#ifdef __TANDEM
 #include <stdlib.h>
 #include <unistd.h>
 #endif

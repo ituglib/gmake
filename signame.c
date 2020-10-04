@@ -40,7 +40,9 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 static const char *undoc;
 
+#ifndef HAVE_SYS_SIGLIST
 static const char *sys_siglist[NSIG];
+#endif
 
 /* Table of abbreviations for signals.  Note:  A given number can
    appear more than once with different abbreviations.  */
@@ -66,8 +68,10 @@ init_sig (int number, const char *abbrev, const char *name)
      the system headers, but... better safe than sorry.  We know, for
      example, that this isn't always true on VMS.  */
 
+#ifndef HAVE_SYS_SIGLIST
   if (number >= 0 && number < NSIG)
     sys_siglist[number] = name;
+#endif
 
   if (sig_table_nelts < SIG_TABLE_SIZE)
     {
@@ -83,9 +87,11 @@ signame_init (void)
 
   undoc = xstrdup (_("unknown signal"));
 
+#ifndef HAVE_SYS_SIGLIST
   /* Initialize signal names.  */
   for (i = 0; i < NSIG; i++)
     sys_siglist[i] = undoc;
+#endif
 
   /* Initialize signal names.  */
 #if defined (SIGHUP)

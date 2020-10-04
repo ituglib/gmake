@@ -1,8 +1,5 @@
 #ifdef __TANDEM
 #define NOLIST nolist
-#else
-#define NOLIST
-#endif
 #include <stdio.h> NOLIST
 #include <stdlib.h> NOLIST
 #include <string.h> NOLIST
@@ -690,6 +687,10 @@ int launch_proc(char *argv[], char *envp[])
    FILE_CLOSE_(filenum);
    return procrc;
 }
+
+#else
+static void noop(void) {}
+#endif /* __TANDEM */
 
 /*===========================================================================*/
 #pragma page "T0593 GUARDIAN GNU Make- standemc Change Descriptions"
