@@ -834,7 +834,7 @@ ar_name_equal (const char *name, const char *mem, int truncated)
       abort ();
 #else
 #ifdef _GUARDIAN_TARGET
-      return strcasecmp (name, mem) == 0;
+      return !strcasecmp (name, mem);
 #elif !defined (__hpux) && !defined (cray)
       struct ar_hdr hdr;
 
