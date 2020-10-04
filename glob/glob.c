@@ -1361,3 +1361,9 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
 }
 
 #endif  /* Not ELIDE_CODE.  */
+
+#ifdef __GNUC__
+/* In case this does not get defined. */
+#undef __alloca
+int __alloca(size_t len) { return malloc(len); }
+#endif
