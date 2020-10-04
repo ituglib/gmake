@@ -1,33 +1,47 @@
 /* Definitions of dependency data structures for GNU Make.
-Copyright (C) 1988, 1989, 1991, 1992, 1993, 1996 Free Software Foundation, Inc.
+Copyright (C) 1988-2014 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
-GNU Make is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
+GNU Make is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
 
-GNU Make is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Make is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with GNU Make; see the file COPYING.  If not, write to
-the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+/* Flag bits for the second argument to 'read_makefile'.
+   These flags are saved in the 'changed' field of each
+   'struct dep' in the chain returned by 'read_all_makefiles'.  */
+
+#define RM_NO_DEFAULT_GOAL      (1 << 0) /* Do not set default goal.  */
+#define RM_INCLUDED             (1 << 1) /* Search makefile search path.  */
+#define RM_DONTCARE             (1 << 2) /* No error if it doesn't exist.  */
+#define RM_NO_TILDE             (1 << 3) /* Don't expand ~ in file name.  */
+#define RM_NOFLAG               0
 
 /* Structure representing one dependency of a file.
-   Each struct file's `deps' points to a chain of these,
-   chained through the `next'.
+   Each struct file's 'deps' points to a chain of these,
+   chained through the 'next'. 'stem' is the stem for this
+   dep line of static pattern rule or NULL.
 
    Note that the first two words of this match a struct nameseq.  */
 
 struct dep
   {
     struct dep *next;
-    char *name;
+    const char *name;
+    const char *stem;
     struct file *file;
-    int changed;
+    unsigned int changed : 8;
+    unsigned int ignore_mtime : 1;
+    unsigned int staticpattern : 1;
+    unsigned int need_2nd_expansion : 1;
+    unsigned int dontcare : 1;
   };
 
 
@@ -36,39 +50,43 @@ struct dep
 struct nameseq
   {
     struct nameseq *next;
-    char *name;
+    const char *name;
   };
 
+#define PARSEFS_NONE    0x0000
+#define PARSEFS_NOSTRIP 0x0001
+#define PARSEFS_NOAR    0x0002
+#define PARSEFS_NOGLOB  0x0004
+#define PARSEFS_EXISTS  0x0008
+#define PARSEFS_NOCACHE 0x0010
 
-extern struct nameseq *multi_glob PARAMS ((struct nameseq *chain,
-                                           unsigned int size));
+#define PARSE_FILE_SEQ(_s,_t,_c,_p,_f) \
+            (_t *)parse_file_seq ((_s),sizeof (_t),(_c),(_p),(_f))
+#define PARSE_SIMPLE_SEQ(_s,_t) \
+            (_t *)parse_file_seq ((_s),sizeof (_t),MAP_NUL,NULL,PARSEFS_NONE)
+
 #ifdef VMS
-extern struct nameseq *parse_file_seq ();
+void *parse_file_seq ();
 #else
-extern struct nameseq *parse_file_seq PARAMS ((char **stringp, int stopchar,
-                                               unsigned int size, int strip));
+void *parse_file_seq (char **stringp, unsigned int size,
+                      int stopmap, const char *prefix, int flags);
 #endif
-extern char *tilde_expand PARAMS ((char *name));
+
+char *tilde_expand (const char *name);
 
 #ifndef NO_ARCHIVES
-extern struct nameseq *ar_glob PARAMS ((char *arname, char *member_pattern,
-                                        unsigned int size));
+struct nameseq *ar_glob (const char *arname, const char *member_pattern, unsigned int size);
 #endif
 
-#ifndef iAPX286
-#define dep_name(d) ((d)->name == 0 ? (d)->file->name : (d)->name)
-#else
-/* Buggy compiler can't hack this.  */
-extern char *dep_name ();
-#endif
+#define dep_name(d)     ((d)->name == 0 ? (d)->file->name : (d)->name)
 
-extern struct dep *read_all_makefiles PARAMS ((char **makefiles));
+#define alloc_dep()     (xcalloc (sizeof (struct dep)))
+#define free_ns(_n)     free (_n)
+#define free_dep(_d)    free_ns (_d)
 
-/* Flag bits for the second argument to `read_makefile'.
-   These flags are saved in the `changed' field of each
-   `struct dep' in the chain returned by `read_all_makefiles'.  */
-#define RM_NO_DEFAULT_GOAL      (1 << 0) /* Do not set default goal.  */
-#define RM_INCLUDED             (1 << 1) /* Search makefile search path.  */
-#define RM_DONTCARE             (1 << 2) /* No error if it doesn't exist.  */
-#define RM_NO_TILDE             (1 << 3) /* Don't expand ~ in file name.  */
-#define RM_NOFLAG               0
+struct dep *copy_dep_chain (const struct dep *d);
+void free_dep_chain (struct dep *d);
+void free_ns_chain (struct nameseq *n);
+struct dep *read_all_makefiles (const char **makefiles);
+void eval_buffer (char *buffer, const gmk_floc *floc);
+enum update_status update_goal_chain (struct dep *goals);

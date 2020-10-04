@@ -22,7 +22,7 @@
 #include <zsysc.h> NOLIST
 #endif
 
-extern int debug_flag;
+#include "debug.h"
 
 /* NSK version of UNIX getwd (similar to getcwd) */
 
@@ -48,19 +48,19 @@ int stat(const char *pathname, struct stat *st)
   rc = FILE_GETINFOLISTBYNAME_( pathname, (short) strlen(pathname), &infolist,
                                 1, (short *) &i64, sizeof( i64 ) );
   if (rc) {
-    if (debug_flag) {
+    if (ISDB(DB_BASIC)) {
       printf("FILE_GETINFOLISTBYNAME_ %s failed, rc = %d\n", pathname, rc);
     }
     return -1;
   }
   julday = INTERPRETTIMESTAMP(i64, datetime);
   if (julday == -1) {
-    if (debug_flag) {
+    if (ISDB(DB_BASIC)) {
       printf("INTREPRETTIMESTAMP %Ld failed, rc = -1\n", i64);
     }
     return -1;
   }
-  if (debug_flag) {
+  if (ISDB(DB_BASIC)) {
     printf("%s AGGRMODIFY_LCT = %04d/%02d/%02d %02d:%02d:%02d\n", pathname,
            datetime[0], datetime[1], datetime[2],
            datetime[3], datetime[4], datetime[5]);
@@ -81,7 +81,7 @@ int stat(const char *pathname, struct stat *st)
   if (st->st_mtime == -1) {
     printf("mktime returned -1 for the timestamp from %s.\n"
            "The DST table may need to be rebuilt.\n", pathname);
-    if (debug_flag) {
+    if (ISDB(DB_BASIC)) {
       printf("mktime updated the tm struct to %04d/%02d/%02d %02d:%02d:%02d\n"
              "and set wday to %d, yday to %d and isdst to %d: see time.h\n",
              caltime.tm_year, caltime.tm_mon, caltime.tm_mday, caltime.tm_hour,

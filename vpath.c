@@ -1,27 +1,26 @@
 /* Implementation of pattern-matching file search paths for GNU Make.
-Copyright (C) 1988,89,91,92,93,94,95,96,97 Free Software Foundation, Inc.
+Copyright (C) 1988-2014 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
-GNU Make is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
+GNU Make is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
 
-GNU Make is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Make is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with GNU Make; see the file COPYING.  If not, write to
-the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "make.h"
+#include "makeint.h"
 #include "filedef.h"
 #include "variable.h"
 #ifdef WINDOWS32
 #include "pathstuff.h"
 #endif
+#include "debug.h"
 
 
 /* Structure used to represent a selective VPATH searchpath.  */
@@ -29,10 +28,10 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 struct vpath
   {
     struct vpath *next; /* Pointer to next struct in the linked list.  */
-    char *pattern;      /* The pattern to match.  */
-    char *percent;      /* Pointer into `pattern' where the `%' is.  */
+    const char *pattern;/* The pattern to match.  */
+    const char *percent;/* Pointer into 'pattern' where the '%' is.  */
     unsigned int patlen;/* Length of the pattern.  */
-    char **searchpath;  /* Null-terminated list of directories.  */
+    const char **searchpath; /* Null-terminated list of directories.  */
     unsigned int maxlen;/* Maximum length of any entry in the list.  */
   };
 
@@ -48,16 +47,14 @@ static struct vpath *general_vpath;
 
 static struct vpath *gpaths;
 
-static int selective_vpath_search PARAMS ((struct vpath *path, char **file,
-                                           time_t *mtime_ptr));
 
-#ifdef __TANDEM
+#ifdef _GUARDIAN_TARGET
 void print_vpath_data_base ();
 #endif
 
-/* Reverse the chain of selective VPATH lists so they
-   will be searched in the order given in the makefiles
-   and construct the list from the VPATH variable.  */
+/* Reverse the chain of selective VPATH lists so they will be searched in the
+   order given in the makefiles and construct the list from the VPATH
+   variable.  */
 
 void
 build_vpath_lists ()
@@ -94,13 +91,14 @@ build_vpath_lists ()
     {
       /* Save the list of vpaths.  */
       struct vpath *save_vpaths = vpaths;
+      char gp[] = "%";
 
-      /* Empty `vpaths' so the new one will have no next, and `vpaths'
+      /* Empty 'vpaths' so the new one will have no next, and 'vpaths'
          will still be nil if P contains no existing directories.  */
       vpaths = 0;
 
       /* Parse P.  */
-      construct_vpath_list ("%", p);
+      construct_vpath_list (gp, p);
 
       /* Store the created path as the general path,
          and restore the old list of vpaths.  */
@@ -126,13 +124,14 @@ build_vpath_lists ()
     {
       /* Save the list of vpaths.  */
       struct vpath *save_vpaths = vpaths;
+      char gp[] = "%";
 
-      /* Empty `vpaths' so the new one will have no next, and `vpaths'
+      /* Empty 'vpaths' so the new one will have no next, and 'vpaths'
          will still be nil if P contains no existing directories.  */
       vpaths = 0;
 
       /* Parse P.  */
-      construct_vpath_list ("%", p);
+      construct_vpath_list (gp, p);
 
       /* Store the created path as the GPATH,
          and restore the old list of vpaths.  */
@@ -141,7 +140,7 @@ build_vpath_lists ()
     }
 }
 
-/* Construct the VPATH listing for the pattern and searchpath given.
+/* Construct the VPATH listing for the PATTERN and DIRPATH given.
 
    This function is called to generate selective VPATH lists and also for
    the general VPATH list (which is in fact just a selective VPATH that
@@ -149,10 +148,10 @@ build_vpath_lists ()
    linked list of all selective VPATH lists or in the GENERAL_VPATH
    variable.
 
-   If SEARCHPATH is nil, remove all previous listings with the same
+   If DIRPATH is nil, remove all previous listings with the same
    pattern.  If PATTERN is nil, remove all VPATH listings.  Existing
-   and readable directories that are not "." given in the searchpath
-   separated by the path element separator (defined in make.h) are
+   and readable directories that are not "." given in the DIRPATH
+   separated by the path element separator (defined in makeint.h) are
    loaded into the directory hash table if they are not there already
    and put in the VPATH searchpath for the given pattern with trailing
    slashes stripped off if present (and if the directory is not the
@@ -161,26 +160,22 @@ build_vpath_lists ()
    VPATHS chain.  */
 
 void
-construct_vpath_list (pattern, dirpath)
-     char *pattern, *dirpath;
+construct_vpath_list (char *pattern, char *dirpath)
 {
-  register unsigned int elem;
-  register char *p;
-  register char **vpath;
-  register unsigned int maxvpath;
+  unsigned int elem;
+  char *p;
+  const char **vpath;
+  unsigned int maxvpath;
   unsigned int maxelem;
-  char *percent = NULL;
+  const char *percent = NULL;
 
   if (pattern != 0)
-    {
-      pattern = savestring (pattern, strlen (pattern));
-      percent = find_percent (pattern);
-    }
+    percent = find_percent (pattern);
 
   if (dirpath == 0)
     {
       /* Remove matching listings.  */
-      register struct vpath *path, *lastpath;
+      struct vpath *path, *lastpath;
 
       lastpath = 0;
       path = vpaths;
@@ -200,9 +195,9 @@ construct_vpath_list (pattern, dirpath)
                 lastpath->next = next;
 
               /* Free its unused storage.  */
-              free (path->pattern);
-              free ((char *) path->searchpath);
-              free ((char *) path);
+              /* MSVC erroneously warns without a cast here.  */
+              free ((void *)path->searchpath);
+              free (path);
             }
           else
             lastpath = path;
@@ -210,14 +205,16 @@ construct_vpath_list (pattern, dirpath)
           path = next;
         }
 
-      if (pattern != 0)
-        free (pattern);
       return;
     }
 
 #ifdef WINDOWS32
-    convert_vpath_to_windows32(dirpath, ';');
+    convert_vpath_to_windows32 (dirpath, ';');
 #endif
+
+  /* Skip over any initial separators and blanks.  */
+  while (*dirpath == PATH_SEPARATOR_CHAR || isblank ((unsigned char)*dirpath))
+    ++dirpath;
 
   /* Figure out the maximum number of VPATH entries and put it in
      MAXELEM.  We start with 2, one before the first separator and one
@@ -226,18 +223,14 @@ construct_vpath_list (pattern, dirpath)
   maxelem = 2;
   p = dirpath;
   while (*p != '\0')
-    if (*p++ == PATH_SEPARATOR_CHAR || isblank (*p))
+    if (*p++ == PATH_SEPARATOR_CHAR || isblank ((unsigned char)*p))
       ++maxelem;
 
-  vpath = (char **) xmalloc (maxelem * sizeof (char *));
+  vpath = xmalloc (maxelem * sizeof (const char *));
   maxvpath = 0;
 
-  /* Skip over any initial separators and blanks.  */
-  p = dirpath;
-  while (*p == PATH_SEPARATOR_CHAR || isblank (*p))
-    ++p;
-
   elem = 0;
+  p = dirpath;
   while (*p != '\0')
     {
       char *v;
@@ -245,44 +238,40 @@ construct_vpath_list (pattern, dirpath)
 
       /* Find the end of this entry.  */
       v = p;
-      while (*p != '\0' && *p != PATH_SEPARATOR_CHAR && !isblank (*p))
+      while (*p != '\0'
+#if defined(HAVE_DOS_PATHS) && (PATH_SEPARATOR_CHAR == ':')
+             /* Platforms whose PATH_SEPARATOR_CHAR is ':' and which
+                also define HAVE_DOS_PATHS would like us to recognize
+                colons after the drive letter in the likes of
+                "D:/foo/bar:C:/xyzzy".  */
+             && (*p != PATH_SEPARATOR_CHAR
+                 || (p == v + 1 && (p[1] == '/' || p[1] == '\\')))
+#else
+             && *p != PATH_SEPARATOR_CHAR
+#endif
+             && !isblank ((unsigned char)*p))
         ++p;
 
       len = p - v;
       /* Make sure there's no trailing slash,
          but still allow "/" as a directory.  */
-#ifdef __MSDOS__
+#if defined(__MSDOS__) || defined(__EMX__) || defined(HAVE_DOS_PATHS)
       /* We need also to leave alone a trailing slash in "d:/".  */
       if (len > 3 || (len > 1 && v[1] != ':'))
 #endif
       if (len > 1 && p[-1] == '/')
         --len;
 
+      /* Put the directory on the vpath list.  */
       if (len > 1 || *v != '.')
         {
-          v = savestring (v, len);
-
-          /* Verify that the directory actually exists.  */
-
-#ifdef __TANDEM
-          if ( 1 ) /* assume subvol is there */
-#else
-          if (dir_file_exists_p (v, ""))
-#endif
-            {
-              /* It does.  Put it in the list.  */
-              vpath[elem++] = dir_name (v);
-              free (v);
-              if (len > maxvpath)
-                maxvpath = len;
-            }
-          else
-            /* The directory does not exist.  Omit from the list.  */
-            free (v);
+          vpath[elem++] = dir_name (strcache_add_len (v, len));
+          if (len > maxvpath)
+            maxvpath = len;
         }
 
       /* Skip over separators and blanks between entries.  */
-      while (*p == PATH_SEPARATOR_CHAR || isblank (*p))
+      while (*p == PATH_SEPARATOR_CHAR || isblank ((unsigned char)*p))
         ++p;
     }
 
@@ -293,33 +282,29 @@ construct_vpath_list (pattern, dirpath)
          entry, to where the nil-pointer terminator goes.
          Usually this is maxelem - 1.  If not, shrink down.  */
       if (elem < (maxelem - 1))
-        vpath = (char **) xrealloc ((char *) vpath,
-                                    (elem + 1) * sizeof (char *));
+        vpath = xrealloc (vpath, (elem+1) * sizeof (const char *));
 
       /* Put the nil-pointer terminator on the end of the VPATH list.  */
-      vpath[elem] = 0;
+      vpath[elem] = NULL;
 
       /* Construct the vpath structure and put it into the linked list.  */
-      path = (struct vpath *) xmalloc (sizeof (struct vpath));
+      path = xmalloc (sizeof (struct vpath));
       path->searchpath = vpath;
       path->maxlen = maxvpath;
       path->next = vpaths;
       vpaths = path;
 
       /* Set up the members.  */
-      path->pattern = pattern;
-      path->percent = percent;
+      path->pattern = strcache_add (pattern);
       path->patlen = strlen (pattern);
+      path->percent = percent ? path->pattern + (percent - pattern) : 0;
     }
   else
-    {
-      /* There were no entries, so free whatever space we allocated.  */
-      free ((char *) vpath);
-      if (pattern != 0)
-        free (pattern);
-    }
-#ifdef __TANDEM
-  if (debug_flag)
+    /* There were no entries, so free whatever space we allocated.  */
+    /* MSVC erroneously warns without a cast here.  */
+    free ((void *)vpath);
+#ifdef _GUARDIAN_TARGET
+  if (ISDB(DB_BASIC))
     print_vpath_data_base ();
 #endif
 }
@@ -328,153 +313,113 @@ construct_vpath_list (pattern, dirpath)
    in.  If it is found, return 1.  Otherwise we return 0.  */
 
 int
-gpath_search (file, len)
-     char *file;
-     int len;
+gpath_search (const char *file, unsigned int len)
 {
-  register char **gp;
-
   if (gpaths && (len <= gpaths->maxlen))
-    for (gp = gpaths->searchpath; *gp != NULL; ++gp)
-      if (!strncmp(*gp, file, len) && (*gp)[len] == '\0')
-        return 1;
+    {
+      const char **gp;
+      for (gp = gpaths->searchpath; *gp != NULL; ++gp)
+        if (strneq (*gp, file, len) && (*gp)[len] == '\0')
+          return 1;
+    }
 
   return 0;
 }
 
-/* Search the VPATH list whose pattern matches *FILE for a directory
-   where the name pointed to by FILE exists.  If it is found, we set *FILE to
-   the newly malloc'd name of the existing file, *MTIME_PTR (if MTIME_PTR is
-   not NULL) to its modtime (or zero if no stat call was done), and return 1.
-   Otherwise we return 0.  */
 
-int
-vpath_search (file, mtime_ptr)
-     char **file;
-     time_t *mtime_ptr;
-{
-  register struct vpath *v;
+/* Search the given VPATH list for a directory where the name pointed to by
+   FILE exists.  If it is found, we return a cached name of the existing file
+   and set *MTIME_PTR (if MTIME_PTR is not NULL) to its modtime (or zero if no
+   stat call was done). Also set the matching directory index in PATH_INDEX
+   if it is not NULL. Otherwise we return NULL.  */
 
-  /* If there are no VPATH entries or FILENAME starts at the root,
-     there is nothing we can do.  */
-
-  if (**file == '/'
-#if defined (WINDOWS32) || defined (__MSDOS__)
-      || **file == '\\'
-      || (*file)[1] == ':'
-#endif
-      || (vpaths == 0 && general_vpath == 0))
-    return 0;
-
-  for (v = vpaths; v != 0; v = v->next)
-    if (pattern_matches (v->pattern, v->percent, *file))
-      if (selective_vpath_search (v, file, mtime_ptr))
-        return 1;
-
-  if (general_vpath != 0
-      && selective_vpath_search (general_vpath, file, mtime_ptr))
-    return 1;
-
-  return 0;
-}
-
-
-/* Search the given VPATH list for a directory where the name pointed
-   to by FILE exists.  If it is found, we set *FILE to the newly malloc'd
-   name of the existing file, *MTIME_PTR (if MTIME_PTR is not NULL) to
-   its modtime (or zero if no stat call was done), and we return 1.
-   Otherwise we return 0.  */
-
-static int
-selective_vpath_search (path, file, mtime_ptr)
-     struct vpath *path;
-     char **file;
-     time_t *mtime_ptr;
+static const char *
+selective_vpath_search (struct vpath *path, const char *file,
+                        FILE_TIMESTAMP *mtime_ptr, unsigned int* path_index)
 {
   int not_target;
-  char *name, *n;
-  char *filename;
-  register char **vpath = path->searchpath;
+  char *name;
+  const char *n;
+  const char *filename;
+  const char **vpath = path->searchpath;
   unsigned int maxvpath = path->maxlen;
-  register unsigned int i;
-  unsigned int flen, vlen, name_dplen;
+  unsigned int i;
+  unsigned int flen, name_dplen;
   int exists = 0;
 
   /* Find out if *FILE is a target.
      If and only if it is NOT a target, we will accept prospective
      files that don't exist but are mentioned in a makefile.  */
   {
-    struct file *f = lookup_file (*file);
+    struct file *f = lookup_file (file);
     not_target = f == 0 || !f->is_target;
   }
 
-  flen = strlen (*file);
+  flen = strlen (file);
 
   /* Split *FILE into a directory prefix and a name-within-directory.
-     NAME_DPLEN gets the length of the prefix; FILENAME gets the
-     pointer to the name-within-directory and FLEN is its length.  */
+     NAME_DPLEN gets the length of the prefix; FILENAME gets the pointer to
+     the name-within-directory and FLEN is its length.  */
 
-  n = rindex (*file, '/');
-#if defined (WINDOWS32) || defined (__MSDOS__)
+  n = strrchr (file, '/');
+#ifdef HAVE_DOS_PATHS
   /* We need the rightmost slash or backslash.  */
   {
-    char *bslash = rindex(*file, '\\');
+    const char *bslash = strrchr (file, '\\');
     if (!n || bslash > n)
       n = bslash;
   }
 #endif
-  name_dplen = n != 0 ? n - *file : 0;
-  filename = name_dplen > 0 ? n + 1 : *file;
+  name_dplen = n != 0 ? n - file : 0;
+  filename = name_dplen > 0 ? n + 1 : file;
   if (name_dplen > 0)
     flen -= name_dplen + 1;
 
-  /* Allocate enough space for the biggest VPATH entry,
-     a slash, the directory prefix that came with *FILE,
-     another slash (although this one may not always be
-     necessary), the filename, and a null terminator.  */
-  name = (char *) xmalloc (maxvpath + 1 + name_dplen + 1 + flen + 1);
+  /* Get enough space for the biggest VPATH entry, a slash, the directory
+     prefix that came with FILE, another slash (although this one may not
+     always be necessary), the filename, and a null terminator.  */
+  name = alloca (maxvpath + 1 + name_dplen + 1 + flen + 1);
 
   /* Try each VPATH entry.  */
   for (i = 0; vpath[i] != 0; ++i)
     {
       int exists_in_cache = 0;
+      char *p = name;
+      unsigned int vlen = strlen (vpath[i]);
 
-      n = name;
-
-      /* Put the next VPATH entry into NAME at N and increment N past it.  */
-      vlen = strlen (vpath[i]);
-      bcopy (vpath[i], n, vlen);
-      n += vlen;
+      /* Put the next VPATH entry into NAME at P and increment P past it.  */
+      memcpy (p, vpath[i], vlen);
+      p += vlen;
 
       /* Add the directory prefix already in *FILE.  */
       if (name_dplen > 0)
         {
 #ifndef VMS
-          *n++ = '/';
+          *p++ = '/';
 #endif
-          bcopy (*file, n, name_dplen);
-          n += name_dplen;
+          memcpy (p, file, name_dplen);
+          p += name_dplen;
         }
 
-#if defined (WINDOWS32) || defined (__MSDOS__)
+#ifdef HAVE_DOS_PATHS
       /* Cause the next if to treat backslash and slash alike.  */
-      if (n != name && n[-1] == '\\' )
-        n[-1] = '/';
+      if (p != name && p[-1] == '\\' )
+        p[-1] = '/';
 #endif
       /* Now add the name-within-directory at the end of NAME.  */
 #ifndef VMS
-      if (n != name && n[-1] != '/')
+      if (p != name && p[-1] != '/')
         {
-#ifdef __TANDEM
-          *n = '.';
+#ifdef _GUARDIAN_TARGET
+          *p = '.';
 #else
-          *n = '/';
+          *p = '/';
 #endif
-          bcopy (filename, n + 1, flen + 1);
+          memcpy (p + 1, filename, flen + 1);
         }
       else
 #endif
-        bcopy (filename, n, flen + 1);
+        memcpy (p, filename, flen + 1);
 
       /* Check if the file is mentioned in a makefile.  If *FILE is not
          a target, that is enough for us to decide this file exists.
@@ -488,11 +433,27 @@ selective_vpath_search (path, file, mtime_ptr)
 
          In December 1993 I loosened this restriction to allow a file
          to be chosen if it is mentioned as a target in a makefile.  This
-         seem logical.  */
+         seem logical.
+
+         Special handling for -W / -o: make sure we preserve the special
+         values here.  Actually this whole thing is a little bogus: I think
+         we should ditch the name/hname thing and look into the renamed
+         capability that already exists for files: that is, have a new struct
+         file* entry for the VPATH-found file, and set the renamed field if
+         we use it.
+      */
       {
         struct file *f = lookup_file (name);
         if (f != 0)
-          exists = not_target || f->is_target;
+          {
+            exists = not_target || f->is_target;
+            if (exists && mtime_ptr
+                && (f->last_mtime == OLD_MTIME || f->last_mtime == NEW_MTIME))
+              {
+                *mtime_ptr = f->last_mtime;
+                mtime_ptr = 0;
+              }
+          }
       }
 
       if (!exists)
@@ -505,7 +466,7 @@ selective_vpath_search (path, file, mtime_ptr)
 #else
           /* Clobber a null into the name at the last slash.
              Now NAME is the name of the directory to look in.  */
-          *n = '\0';
+          *p = '\0';
 
           /* We know the directory is in the hash table now because either
              construct_vpath_list or the code just above put it there.
@@ -514,7 +475,7 @@ selective_vpath_search (path, file, mtime_ptr)
 #endif
         }
 
-#ifdef __TANDEM
+#ifdef _GUARDIAN_TARGET
       if ( 1 ) /* stat below will check this */
         {
           struct stat st;
@@ -531,51 +492,119 @@ selective_vpath_search (path, file, mtime_ptr)
              exists, but stat fails for it, confusion results in the
              higher levels.  */
 
-
 #ifndef VMS
           /* Put the slash back in NAME.  */
-#ifdef __TANDEM
-          *n = '.';
+#ifdef _GUARDIAN_TARGET
+          *p = '.';
 #else
-          *n = '/';
+          *p = '/';
 #endif
 #endif
 
-          if (!exists_in_cache  /* Makefile-mentioned file need not exist.  */
-              || stat (name, &st) == 0) /* Does it really exist?  */
+          if (exists_in_cache)  /* Makefile-mentioned file need not exist.  */
             {
-              /* We have found a file.
-                 Store the name we found into *FILE for the caller.  */
+              int e;
 
-              *file = savestring (name, (n + 1 - name) + flen);
+              EINTRLOOP (e, stat (name, &st)); /* Does it really exist?  */
+              if (e != 0)
+                {
+                  exists = 0;
+                  continue;
+                }
 
+              /* Store the modtime into *MTIME_PTR for the caller.  */
               if (mtime_ptr != 0)
-                /* Store the modtime into *MTIME_PTR for the caller.
-                   If we have had no need to stat the file here,
-                   we record a zero modtime to indicate this.  */
-                *mtime_ptr = exists_in_cache ? st.st_mtime : (time_t) 0;
-
-              free (name);
-              return 1;
+                {
+                  *mtime_ptr = FILE_TIMESTAMP_STAT_MODTIME (name, st);
+                  mtime_ptr = 0;
+                }
             }
-          else
-            exists = 0;
+
+          /* We have found a file.
+             If we get here and mtime_ptr hasn't been set, record
+             UNKNOWN_MTIME to indicate this.  */
+          if (mtime_ptr != 0)
+            *mtime_ptr = UNKNOWN_MTIME;
+
+          /* Store the name we found and return it.  */
+
+          if (path_index)
+            *path_index = i;
+
+          return strcache_add_len (name, (p + 1 - name) + flen);
         }
     }
 
-  free (name);
   return 0;
 }
+
+
+/* Search the VPATH list whose pattern matches FILE for a directory where FILE
+   exists.  If it is found, return the cached name of an existing file, and
+   set *MTIME_PTR (if MTIME_PTR is not NULL) to its modtime (or zero if no
+   stat call was done). Also set the matching directory index in VPATH_INDEX
+   and PATH_INDEX if they are not NULL.  Otherwise we return 0.  */
+
+const char *
+vpath_search (const char *file, FILE_TIMESTAMP *mtime_ptr,
+              unsigned int* vpath_index, unsigned int* path_index)
+{
+  struct vpath *v;
+
+  /* If there are no VPATH entries or FILENAME starts at the root,
+     there is nothing we can do.  */
+
+  if (file[0] == '/'
+#ifdef HAVE_DOS_PATHS
+      || file[0] == '\\' || file[1] == ':'
+#endif
+      || (vpaths == 0 && general_vpath == 0))
+    return 0;
+
+  if (vpath_index)
+    {
+      *vpath_index = 0;
+      *path_index = 0;
+    }
+
+  for (v = vpaths; v != 0; v = v->next)
+    {
+      if (pattern_matches (v->pattern, v->percent, file))
+        {
+          const char *p = selective_vpath_search (
+            v, file, mtime_ptr, path_index);
+          if (p)
+            return p;
+        }
+
+      if (vpath_index)
+        ++*vpath_index;
+    }
+
+
+  if (general_vpath != 0)
+    {
+      const char *p = selective_vpath_search (
+        general_vpath, file, mtime_ptr, path_index);
+      if (p)
+        return p;
+    }
+
+  return 0;
+}
+
+
+
 
 /* Print the data base of VPATH search paths.  */
 
 void
-print_vpath_data_base ()
+print_vpath_data_base (void)
 {
-  register unsigned int nvpaths;
-  register struct vpath *v;
+  unsigned int nvpaths;
+  struct vpath *v;
 
-  puts ("\n# VPATH Search Paths\n");
+  puts (_("\n# VPATH Search Paths\n"));
 
   nvpaths = 0;
   for (v = vpaths; v != 0; v = v->next)
@@ -592,18 +621,18 @@ print_vpath_data_base ()
     }
 
   if (vpaths == 0)
-    puts ("# No `vpath' search paths.");
+    puts (_("# No 'vpath' search paths."));
   else
-    printf ("\n# %u `vpath' search paths.\n", nvpaths);
+    printf (_("\n# %u 'vpath' search paths.\n"), nvpaths);
 
   if (general_vpath == 0)
-    puts ("\n# No general (`VPATH' variable) search path.");
+    puts (_("\n# No general ('VPATH' variable) search path."));
   else
     {
-      register char **path = general_vpath->searchpath;
-      register unsigned int i;
+      const char **path = general_vpath->searchpath;
+      unsigned int i;
 
-      fputs ("\n# General (`VPATH' variable) search path:\n# ", stdout);
+      fputs (_("\n# General ('VPATH' variable) search path:\n# "), stdout);
 
       for (i = 0; path[i] != 0; ++i)
         printf ("%s%c", path[i],

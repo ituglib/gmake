@@ -1,25 +1,23 @@
 /* Template for the remote job exportation interface to GNU Make.
-Copyright (C) 1988, 1989, 1992, 1993, 1996 Free Software Foundation, Inc.
+Copyright (C) 1988-2014 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
-GNU Make is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
+GNU Make is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
 
-GNU Make is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Make is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with GNU Make; see the file COPYING.  If not, write to
-the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "make.h"
+#include "makeint.h"
 #include "filedef.h"
 #include "job.h"
-#include "command.h"
+#include "commands.h"
 
 
 char *remote_description = 0;
@@ -27,22 +25,21 @@ char *remote_description = 0;
 /* Call once at startup even if no commands are run.  */
 
 void
-remote_setup ()
+remote_setup (void)
 {
 }
 
 /* Called before exit.  */
 
 void
-remote_cleanup ()
+remote_cleanup (void)
 {
 }
 
 /* Return nonzero if the next job should be done remotely.  */
 
 int
-start_remote_job_p (first_p)
-     int first_p;
+start_remote_job_p (int first_p UNUSED)
 {
   return 0;
 }
@@ -55,12 +52,9 @@ start_remote_job_p (first_p)
    nonzero if it is remote (meaning *ID_PTR is a process ID).  */
 
 int
-start_remote_job (argv, envp, stdin_fd, is_remote, id_ptr, used_stdin)
-     char **argv, **envp;
-     int stdin_fd;
-     int *is_remote;
-     int *id_ptr;
-     int *used_stdin;
+start_remote_job (char **argv UNUSED, char **envp UNUSED, int stdin_fd UNUSED,
+                  int *is_remote UNUSED, int *id_ptr UNUSED,
+                  int *used_stdin UNUSED)
 {
   return -1;
 }
@@ -72,9 +66,8 @@ start_remote_job (argv, envp, stdin_fd, is_remote, id_ptr, used_stdin)
    0 if we would have to block and !BLOCK, or < 0 if there were none.  */
 
 int
-remote_status (exit_code_ptr, signal_ptr, coredump_ptr, block)
-     int *exit_code_ptr, *signal_ptr, *coredump_ptr;
-     int block;
+remote_status (int *exit_code_ptr UNUSED, int *signal_ptr UNUSED,
+               int *coredump_ptr UNUSED, int block UNUSED)
 {
   errno = ECHILD;
   return -1;
@@ -84,7 +77,7 @@ remote_status (exit_code_ptr, signal_ptr, coredump_ptr, block)
    If this notification is done by raising the child termination
    signal, do not block that signal.  */
 void
-block_remote_children ()
+block_remote_children (void)
 {
   return;
 }
@@ -93,16 +86,14 @@ block_remote_children ()
    If this is done by raising the child termination signal,
    do not unblock that signal.  */
 void
-unblock_remote_children ()
+unblock_remote_children (void)
 {
   return;
 }
 
 /* Send signal SIG to child ID.  Return 0 if successful, -1 if not.  */
 int
-remote_kill (id, sig)
-     int id;
-     int sig;
+remote_kill (int id UNUSED, int sig UNUSED)
 {
   return -1;
 }

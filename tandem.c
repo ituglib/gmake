@@ -26,15 +26,15 @@
 #define _XOPEN_SOURCE /* getopt */
 #include <unistd.h> NOLIST /* getopt */
 
+#include "makeint.h"
+#include "tandem.h"
+#include "debug.h"
+
 #define PROCDEATH_PREMATURE 3 /* Proc Calls App. C Completion Codes: file? */
 
 /* capture calls to unsupported functions */
 
-int vfork() { DEBUG(); return -1; }
-
 #ifndef HAVE_CONFIG_H /* for testing without gmake */
-int debug_flag = 0;
-int launch_proc(char *argv[]);
 
 int main(int argc, char *argv[])
 {
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
   while ((optchar = getopt(argc, argv, "d")) != EOF)
     switch (optchar) {
-    case 'd': debug_flag = 1; break;
+    case 'd': db_level = DB_BASIC = 1; break;
     default: printf("%s [-d] { /in file/ | cmd  ... }\n", argv[0]); return 1;
     }
 
@@ -91,8 +91,6 @@ int main(int argc, char *argv[])
   } else
     return launch_proc(&argv[optind]);
 }
-#else
-   extern int debug_flag;
 #endif
 
 /*
@@ -122,7 +120,7 @@ int main(int argc, char *argv[])
   /monitor launchee for completion to get it's return code.
  */
 
-int launch_proc(char *argv[])
+int launch_proc(char *argv[], char *envp[])
 {
    process_launch_parms_def plist = P_L_DEFAULT_PARMS_;
    short error, errordet, olistlen, filenum, rc, slen, plen, num, index;
@@ -153,7 +151,7 @@ int launch_proc(char *argv[])
    }
 
    rc = get_startup_msg(smt, &slen);
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc get_startup_msg returned "
             "%d, len %d, code %d, '%.16s', '%.24s', '%.24s', '%s'\n",
             rc, slen, smt->msg_code, smt->defaults.whole, smt->infile.whole,
@@ -172,7 +170,7 @@ int launch_proc(char *argv[])
    memset(smt->infile.whole, ' ', sizeof(smt->infile.whole));
    memset(smt->outfile.whole, ' ', sizeof(smt->outfile.whole));
 
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("lauch_proc infile = '%.24s', outfile = '%.24s'\n",
              smt->infile.whole, smt->outfile.whole);
 
@@ -205,7 +203,7 @@ int launch_proc(char *argv[])
    */
 
    bptr = cbuf;
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc cbuf = '%s'\n", cbuf);
    s1ptr = strchr(bptr, '/'); /* look for first slash */
    if (s1ptr)
@@ -217,7 +215,7 @@ int launch_proc(char *argv[])
      return PROCDEATH_PREMATURE;
    }
    strcpy(cmd, bptr); /* cmdname /in file, out file/ arg1, arg2, argn */
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc cmd = '%s' at 0x%x\n", cmd, cmd);
 
    /* handle remote program if needed */
@@ -239,7 +237,7 @@ int launch_proc(char *argv[])
      }
      pgmnodename[size1] = NULL;
      /* compare our node name with program name name */
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc node name = '%s', pgm node name = '%s'\n",
               mynodename, pgmnodename);
      if (strcasecmp(mynodename, pgmnodename)) {
@@ -264,7 +262,7 @@ int launch_proc(char *argv[])
    } /* if (cmd[0] == '\\') */
 
    if (s2ptr) { /* run-options (in file, out file, etc.) */
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc last slash addr = 0x%x\n", s2ptr);
      while(1) { /* second slash is end of run-options */
 
@@ -275,7 +273,7 @@ int launch_proc(char *argv[])
        cptr = nextptr;
        while(*cptr == ' ')
          cptr++;
-       if (debug_flag)
+       if (ISDB(DB_BASIC))
          printf("launch_proc last token start/end addrs = 0x%x, 0x%x\n",
                 bptr, cptr);
        if (cptr >= s2ptr) {
@@ -294,7 +292,7 @@ int launch_proc(char *argv[])
        /* All is okay, so go and get our next token */
        bptr = strtok(NULL, separators);
 
-       if (debug_flag) {
+       if (ISDB(DB_BASIC)) {
          printf("launch_proc bptr = '%s', sepptr = '%s', cptr = '%s'\n",
                  bptr, sepptr, cptr);
          printf("launch_proc next token = '%s' at 0x%x\n", bptr, bptr);
@@ -313,13 +311,13 @@ int launch_proc(char *argv[])
           */
          if ((sepptr == NULL) || (*sepptr == '\0') ||
              (strspn(bptr + strlen(bptr) +1, ",/")) ) {
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf ("launch_proc not setting infile name\n");
          } else {
            /* in inlen out */
            bptr = strtok(NULL, separators);
 
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf("launch_proc infile = '%s' at 0x%x\n", bptr, bptr);
            /* need to add node if remote pgm */
            if (remotepgm) {
@@ -354,13 +352,13 @@ int launch_proc(char *argv[])
           */
          if ((sepptr == NULL) || (*sepptr == '\0') ||
              (strspn(bptr + strlen(bptr) +1, ",/")) ) {
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf ("launch_proc not setting outfile name\n");
          } else {
            /* in inlen out */
            bptr = strtok(NULL, separators);
 
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf("launch_proc outfile = '%s' at 0x%x\n", bptr, bptr);
            /* need to add node if remote pgm */
            if (remotepgm) {
@@ -397,14 +395,14 @@ int launch_proc(char *argv[])
            return PROCDEATH_PREMATURE;
          }
 
-         if (debug_flag)
+         if (ISDB(DB_BASIC))
            printf("launch_proc cpu = '%s' at 0x%x\n", bptr, bptr);
 
          plist.cpu = atoi(bptr);
 
        } else if (!strncasecmp(bptr, "DEBUG", strlen("DEBUG"))) {
 
-         if (debug_flag)
+         if (ISDB(DB_BASIC))
            printf("launch_proc debug is set\n");
 
          plist.debug_options = ZSYS_VAL_PCREATOPT_RUND;
@@ -417,7 +415,7 @@ int launch_proc(char *argv[])
           */
          if ((sepptr == NULL) || (*sepptr == '\0') ||
              (strspn(bptr + strlen(bptr) +1, ",/")) ) {
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf ("launch_proc using generated process name\n");
          } else {
            namespecified = 1;
@@ -434,7 +432,7 @@ int launch_proc(char *argv[])
              plist.process_name = process_name;
              plist.process_name_len = strlen(process_name);
 
-             if (debug_flag){
+             if (ISDB(DB_BASIC)){
                printf("launch_proc using '%s' process name\n",
                          process_name);
              }
@@ -474,7 +472,7 @@ int launch_proc(char *argv[])
        memcpy(smt->outfile.whole, oldhome, 24);
    }
 
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc launching infile= '%.24s', outfile= '%.24s'\n",
              smt->infile.whole, smt->outfile.whole);
 
@@ -486,7 +484,7 @@ int launch_proc(char *argv[])
        /* Need more space for our parameters */
        smt = realloc(smt, sizeof(startup_msg_type) +
                           strlen(bptr) - sizeof(smt->param) + 4);
-       if (debug_flag)
+       if (ISDB(DB_BASIC))
          printf("launch_proc realloc size = %d\n",
                  sizeof(startup_msg_type) + strlen(bptr) -
                  sizeof(smt->param) + 4);
@@ -496,16 +494,16 @@ int launch_proc(char *argv[])
        }
      }
      strcpy(smt->param, bptr);
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc param = '%s'\n", bptr);
    } else smt->param[0] = NULL;
 
    param_len = (short) strlen(smt->param);
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc param len = %d\n", param_len);
    for (index = param_len; index < (param_len + 3); smt->param[index++] = 0);
    index -= (index % 2) ? 1 : 2;
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc new param len = %d\n", index);
 
    if (!namespecified) {
@@ -529,7 +527,7 @@ int launch_proc(char *argv[])
      }
    }
 
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc Opening %.*s\n",
             olist.z_procname_len, olist.u_z_data.z_procname);
    error = FILE_OPEN_(olist.u_z_data.z_procname, olist.z_procname_len,
@@ -541,7 +539,7 @@ int launch_proc(char *argv[])
      return PROCDEATH_PREMATURE;
    }
 
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc sent get_startup_msg, "
             "len %d, code %d, '%.16s', '%.24s', '%.24s', '%s'\n",
             sizeof(startup_msg_type) - sizeof(smt->param) + index,
@@ -555,7 +553,7 @@ int launch_proc(char *argv[])
    if (wrerror) {
      FILE_GETINFO_(filenum, &errordet);
      if (errordet == 70) {
-       if (debug_flag)
+       if (ISDB(DB_BASIC))
          printf("launch_proc WRITEREADX got error 70 (send params/assigns)\n");
        doassigns = 1;
        doparams = 1;
@@ -569,7 +567,7 @@ int launch_proc(char *argv[])
      bptr = (char *) smt;
      doassigns = (short) (*bptr & 0x80);
      doparams = (short) (*bptr & 0x40);
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc WRITEREADX Countread was %d, assigns flag was %x, "
               "params flag was %x\n", countread, doassigns, doparams);
    }
@@ -577,7 +575,7 @@ int launch_proc(char *argv[])
    if (doparams) {
      rc = get_param_msg(&pmt, &plen); /* all params are in one message */
      /* parameters: 0 - name len, 1 for n - name, n + 1: val len, n + 2: val */
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc get_param_msg returned %d, code %d, params %d\n",
               rc, pmt.msg_code, pmt.num_params);
 
@@ -603,11 +601,11 @@ int launch_proc(char *argv[])
     /* code needs to be fixed                                                */
     num = 0;
 #endif
-     if (debug_flag)
+     if (ISDB(DB_BASIC))
        printf("launch_proc get_max_assign_msg_ordinal returned %d\n", num);
      for (index = 1; index <= num; index++) { /* send each one */
        rc = get_assign_msg((short) index, &amt);
-       if (debug_flag) {
+       if (ISDB(DB_BASIC)) {
          printf("launch_proc get_assign_msg returned %d, %d, %.*s, %.*s, "
                 "0x%x, %.24s\n",
                 rc, amt.msg_code,
@@ -649,7 +647,7 @@ int launch_proc(char *argv[])
      return PROCDEATH_PREMATURE;
    }
 
-   if (debug_flag)
+   if (ISDB(DB_BASIC))
      printf("launch_proc Waiting for process death message\n");
    running = 1;
    while(running) {
@@ -658,7 +656,7 @@ int launch_proc(char *argv[])
        if (smsg->u_z_msg.z_msgnumber[0] == ZSYS_VAL_SMSG_PROCDEATH) {
          wrerror = CHILD_LOST_(buf, len, (short *) &olist.z_phandle);
          if (wrerror != 4) { /* is this the process we last started? */
-           if (debug_flag) {
+           if (ISDB(DB_BASIC)) {
              printf("launch_proc CHILD_LOST_ returned %d for ", wrerror);
              printf("%.*s which returned %d\n", spdmsg->z_procname.zlen,
                     (char *) ((char *) smsg + spdmsg->z_procname.zoffset),
@@ -666,10 +664,10 @@ int launch_proc(char *argv[])
            }
          } else {
            if ( spdmsg->z_flags & ZSYS_MSK_PDEATH_ABENDED ) {
-             if (debug_flag)
+             if (ISDB(DB_BASIC))
                printf("launch_proc: process abended\n");
            }
-           if (debug_flag)
+           if (ISDB(DB_BASIC))
              printf("launch_proc %.*s returned %d\n", spdmsg->z_procname.zlen,
                     (char *) ((char *) smsg + spdmsg->z_procname.zoffset),
                     spdmsg->z_completion_code);
@@ -677,12 +675,12 @@ int launch_proc(char *argv[])
            running = 0; /* break; */
          }
        } else { /* if (smsg->u_z_msg.z_msgnumber[0] == ...PROCDEATH) */
-         if (debug_flag)
+         if (ISDB(DB_BASIC))
            printf("launch_proc READUPDATEX got msgnumber %d\n",
                   smsg->u_z_msg.z_msgnumber[0]);
        }
      } else if (_status_eq(wrerror)) { /* if (_status_gt(wrerror)) */
-       if (debug_flag)
+       if (ISDB(DB_BASIC))
          printf("launch_proc READUPDATEX got user message\n");
      } else {
        printf("launch_proc READUPDATEX got error %d\n", wrerror);

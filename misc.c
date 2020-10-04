@@ -1,36 +1,50 @@
 /* Miscellaneous generic support functions for GNU Make.
-Copyright (C) 1988,89,90,91,92,93,94,95,97 Free Software Foundation, Inc.
+Copyright (C) 1988-2014 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
-GNU Make is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
+GNU Make is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
 
-GNU Make is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Make is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with GNU Make; see the file COPYING.  If not, write to
-the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <http://www.gnu.org/licenses/>.  */
+#ifdef __TANDEM
+#define _XOPEN_SOURCE_EXTENDED 1
+#endif
 
-#include "make.h"
+#include "makeint.h"
+#include "filedef.h"
 #include "dep.h"
+#include "debug.h"
 
+/* GNU make no longer supports pre-ANSI89 environments.  */
+
+#include <stdarg.h>
+
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#else
+# include <sys/file.h>
+#endif
 
 /* Compare strings *S1 and *S2.
    Return negative if the first is less, positive if it is greater,
    zero if they are equal.  */
 
 int
-alpha_compare (s1, s2)
-     char **s1, **s2;
+alpha_compare (const void *v1, const void *v2)
 {
-  if (**s1 != **s2)
-    return **s1 - **s2;
-  return strcmp (*s1, *s2);
+  const char *s1 = *((char **)v1);
+  const char *s2 = *((char **)v2);
+
+  if (*s1 != *s2)
+    return *s1 - *s2;
+  return strcmp (s1, s2);
 }
 
 /* Discard each backslash-newline combination from LINE.
@@ -38,14 +52,11 @@ alpha_compare (s1, s2)
    This is done by copying the text at LINE into itself.  */
 
 void
-collapse_continuations (line)
-     char *line;
+collapse_continuations (char *line)
 {
-  register char *in, *out, *p;
-  register int backslash;
-  register unsigned int bs_write;
+  char *in, *out, *p;
 
-  in = index (line, '\n');
+  in = strchr (line, '\n');
   if (in == 0)
     return;
 
@@ -58,8 +69,8 @@ collapse_continuations (line)
       /* BS_WRITE gets the number of quoted backslashes at
          the end just before IN, and BACKSLASH gets nonzero
          if the next character is quoted.  */
-      backslash = 0;
-      bs_write = 0;
+      unsigned int backslash = 0;
+      unsigned int bs_write = 0;
       for (p = in - 1; p >= line && *p == '\\'; --p)
         {
           if (backslash)
@@ -79,13 +90,17 @@ collapse_continuations (line)
       /* Skip the newline.  */
       ++in;
 
-      /* If the newline is quoted, discard following whitespace
-         and any preceding whitespace; leave just one space.  */
       if (backslash)
         {
+          /* Backslash/newline handling:
+             In traditional GNU make all trailing whitespace, consecutive
+             backslash/newlines, and any leading whitespace on the next line
+             is reduced to a single space.
+             In POSIX, each backslash/newline and is replaced by a space.  */
           in = next_token (in);
-          while (out > line && isblank (out[-1]))
-            --out;
+          if (! posix_pedantic)
+            while (out > line && isblank ((unsigned char)out[-1]))
+              --out;
           *out++ = ' ';
         }
       else
@@ -114,164 +129,68 @@ collapse_continuations (line)
 
   *out = '\0';
 }
-
-
-/* Remove comments from LINE.
-   This is done by copying the text at LINE onto itself.  */
-
-void
-remove_comments (line)
-     char *line;
-{
-  char *comment;
-
-  comment = find_char_unquote (line, "#", 0);
-
-  if (comment != 0)
-    /* Cut off the line at the #.  */
-    *comment = '\0';
-}
 
-/* Print N spaces (used by DEBUGPR for target-depth).  */
+/* Print N spaces (used in debug for target-depth).  */
 
 void
-print_spaces (n)
-     register unsigned int n;
+print_spaces (unsigned int n)
 {
   while (n-- > 0)
     putchar (' ');
 }
 
 
-/* Return a newly-allocated string whose contents
-   concatenate those of s1, s2, s3.  */
+/* Return a string whose contents concatenate the NUM strings provided
+   This string lives in static, re-used memory.  */
 
-char *
-concat (s1, s2, s3)
-     register char *s1, *s2, *s3;
+const char *
+concat (unsigned int num, ...)
 {
-  register unsigned int len1, len2, len3;
-  register char *result;
+  static unsigned int rlen = 0;
+  static char *result = NULL;
+  unsigned int ri = 0;
+  va_list args;
 
-  len1 = *s1 != '\0' ? strlen (s1) : 0;
-  len2 = *s2 != '\0' ? strlen (s2) : 0;
-  len3 = *s3 != '\0' ? strlen (s3) : 0;
+  va_start (args, num);
 
-  result = (char *) xmalloc (len1 + len2 + len3 + 1);
+  while (num-- > 0)
+    {
+      const char *s = va_arg (args, const char *);
+      unsigned int l = xstrlen (s);
 
-  if (*s1 != '\0')
-    bcopy (s1, result, len1);
-  if (*s2 != '\0')
-    bcopy (s2, result + len1, len2);
-  if (*s3 != '\0')
-    bcopy (s3, result + len1 + len2, len3);
-  *(result + len1 + len2 + len3) = '\0';
+      if (l == 0)
+        continue;
+
+      if (ri + l > rlen)
+        {
+          rlen = ((rlen ? rlen : 60) + l) * 2;
+          result = xrealloc (result, rlen);
+        }
+
+      memcpy (result + ri, s, l);
+      ri += l;
+    }
+
+  va_end (args);
+
+  /* Get some more memory if we don't have enough space for the
+     terminating '\0'.   */
+  if (ri == rlen)
+    {
+      rlen = (rlen ? rlen : 60) * 2;
+      result = xrealloc (result, rlen);
+    }
+
+  result[ri] = '\0';
 
   return result;
 }
 
-/* Print a message on stdout.  */
-
-void
-message (prefix, s1, s2, s3, s4, s5, s6)
-     int prefix;
-     char *s1, *s2, *s3, *s4, *s5, *s6;
-{
-  log_working_directory (1);
-
-  if (s1 != 0)
-    {
-      if (prefix)
-        {
-          if (makelevel == 0)
-            printf ("%s: ", program);
-          else
-            printf ("%s[%u]: ", program, makelevel);
-        }
-      printf (s1, s2, s3, s4, s5, s6);
-      putchar ('\n');
-    }
-
-  fflush (stdout);
-}
-
-/* Print an error message and exit.  */
-
-/* VARARGS1 */
-void
-fatal (s1, s2, s3, s4, s5, s6)
-     char *s1, *s2, *s3, *s4, *s5, *s6;
-{
-  log_working_directory (1);
-
-  if (makelevel == 0)
-    fprintf (stderr, "%s: *** ", program);
-  else
-    fprintf (stderr, "%s[%u]: *** ", program, makelevel);
-  fprintf (stderr, s1, s2, s3, s4, s5, s6);
-  fputs (".  Stop.\n", stderr);
-
-  die (2);
-}
-
-/* Print error message.  `s1' is printf control string, `s2' is arg for it. */
-
-/* VARARGS1 */
-
-void
-error (s1, s2, s3, s4, s5, s6)
-     char *s1, *s2, *s3, *s4, *s5, *s6;
-{
-  log_working_directory (1);
-
-  if (makelevel == 0)
-    fprintf (stderr, "%s: ", program);
-  else
-    fprintf (stderr, "%s[%u]: ", program, makelevel);
-  fprintf (stderr, s1, s2, s3, s4, s5, s6);
-  putc ('\n', stderr);
-  fflush (stderr);
-}
-
-void
-makefile_error (file, lineno, s1, s2, s3, s4, s5, s6)
-     char *file;
-     unsigned int lineno;
-     char *s1, *s2, *s3, *s4, *s5, *s6;
-{
-  log_working_directory (1);
-
-  fprintf (stderr, "%s:%u: ", file, lineno);
-  fprintf (stderr, s1, s2, s3, s4, s5, s6);
-  putc ('\n', stderr);
-  fflush (stderr);
-}
-
-void
-makefile_fatal (file, lineno, s1, s2, s3, s4, s5, s6)
-     char *file;
-     unsigned int lineno;
-     char *s1, *s2, *s3, *s4, *s5, *s6;
-{
-  if (!file)
-    fatal(s1, s2, s3, s4, s5, s6);
-
-  log_working_directory (1);
-
-  fprintf (stderr, "%s:%u: *** ", file, lineno);
-  fprintf (stderr, s1, s2, s3, s4, s5, s6);
-  fputs (".  Stop.\n", stderr);
-
-  die (2);
-}
 
 #ifndef HAVE_STRERROR
-
 #undef  strerror
-
 char *
-strerror (errnum)
-     int errnum;
+strerror (int errnum)
 {
   extern int errno, sys_nerr;
 #ifndef __DECC
@@ -282,94 +201,100 @@ strerror (errnum)
   if (errno < sys_nerr)
     return sys_errlist[errnum];
 
-  sprintf (buf, "Unknown error %d", errnum);
+  sprintf (buf, _("Unknown error %d"), errnum);
   return buf;
 }
 #endif
-
-/* Print an error message from errno.  */
-
-void
-perror_with_name (str, name)
-     char *str, *name;
-{
-  error ("%s%s: %s", str, name, strerror (errno));
-}
-
-/* Print an error message from errno and exit.  */
-
-void
-pfatal_with_name (name)
-     char *name;
-{
-  fatal ("%s: %s", name, strerror (errno));
-
-  /* NOTREACHED */
-}
 
 /* Like malloc but get fatal error if memory is exhausted.  */
+/* Don't bother if we're using dmalloc; it provides these for us.  */
+
+#ifndef HAVE_DMALLOC_H
 
 #undef xmalloc
+#undef xcalloc
 #undef xrealloc
+#undef xstrdup
 
-char *
-xmalloc (size)
-     unsigned int size;
+void *
+xmalloc (unsigned int size)
 {
-  char *result = (char *) malloc (size);
+  /* Make sure we don't allocate 0, for pre-ISO implementations.  */
+  void *result = malloc (size ? size : 1);
   if (result == 0)
-    fatal ("virtual memory exhausted");
+    OUT_OF_MEM();
+  return result;
+}
+
+
+void *
+xcalloc (unsigned int size)
+{
+  /* Make sure we don't allocate 0, for pre-ISO implementations.  */
+  void *result = calloc (size ? size : 1, 1);
+  if (result == 0)
+    OUT_OF_MEM();
+  return result;
+}
+
+
+void *
+xrealloc (void *ptr, unsigned int size)
+{
+  void *result;
+
+  /* Some older implementations of realloc() don't conform to ISO.  */
+  if (! size)
+    size = 1;
+  result = ptr ? realloc (ptr, size) : malloc (size);
+  if (result == 0)
+    OUT_OF_MEM();
   return result;
 }
 
 
 char *
-xrealloc (ptr, size)
-     char *ptr;
-     unsigned int size;
+xstrdup (const char *ptr)
 {
-  char *result = (char *) realloc (ptr, size);
+  char *result;
+
+#ifdef HAVE_STRDUP
+  result = strdup (ptr);
+#else
+  result = malloc (strlen (ptr) + 1);
+#endif
+
   if (result == 0)
-    fatal ("virtual memory exhausted");
+    OUT_OF_MEM();
+
+#ifdef HAVE_STRDUP
   return result;
+#else
+  return strcpy (result, ptr);
+#endif
 }
 
+#endif  /* HAVE_DMALLOC_H */
+
 char *
-savestring (str, length)
-     char *str;
-     unsigned int length;
+xstrndup (const char *str, unsigned int length)
 {
-  register char *out = (char *) xmalloc (length + 1);
+  char *result;
+
+#ifdef HAVE_STRNDUP
+  result = strndup (str, length);
+  if (result == 0)
+    OUT_OF_MEM();
+#else
+  result = xmalloc (length + 1);
   if (length > 0)
-    bcopy (str, out, length);
-  out[length] = '\0';
-  return out;
+    strncpy (result, str, length);
+  result[length] = '\0';
+#endif
+
+  return result;
 }
 
-/* Search string BIG (length BLEN) for an occurrence of
-   string SMALL (length SLEN).  Return a pointer to the
-   beginning of the first occurrence, or return nil if none found.  */
-
-char *
-sindex (big, blen, small, slen)
-     char *big;
-     unsigned int blen;
-     char *small;
-     unsigned int slen;
-{
-  register unsigned int b;
-
-  if (blen < 1)
-    blen = strlen (big);
-  if (slen < 1)
-    slen = strlen (small);
-
-  for (b = 0; b < blen; ++b)
-    if (big[b] == *small && !strncmp (&big[b + 1], small + 1, slen - 1))
-      return (&big[b]);
-
-  return 0;
-}
 
 /* Limited INDEX:
    Search through the string STRING, which ends at LIMIT, for the character C.
@@ -378,13 +303,11 @@ sindex (big, blen, small, slen)
    instead of at the first null.  */
 
 char *
-lindex (s, limit, c)
-     register char *s, *limit;
-     int c;
+lindex (const char *s, const char *limit, int c)
 {
   while (s < limit)
     if (*s++ == c)
-      return s - 1;
+      return (char *)(s - 1);
 
   return 0;
 }
@@ -392,95 +315,59 @@ lindex (s, limit, c)
 /* Return the address of the first whitespace or null in the string S.  */
 
 char *
-end_of_token (s)
-     char *s;
+end_of_token (const char *s)
 {
-  while (*s != '\0' && !isblank (*s))
+  while (! STOP_SET (*s, MAP_BLANK|MAP_NUL))
     ++s;
-  return s;
+  return (char *)s;
 }
-
-#ifdef WINDOWS32
-/*
- * Same as end_of_token, but take into account a stop character
- */
-char *
-end_of_token_w32 (s, stopchar)
-     char *s;
-     char stopchar;
-{
-  register char *p = s;
-  register int backslash = 0;
-
-  while (*p != '\0' && *p != stopchar && (backslash || !isblank (*p)))
-    {
-      if (*p++ == '\\')
-        {
-          backslash = !backslash;
-          while (*p == '\\')
-            {
-              backslash = !backslash;
-              ++p;
-            }
-        }
-      else
-        backslash = 0;
-    }
-
-  return p;
-}
-#endif
 
 /* Return the address of the first nonwhitespace or null in the string S.  */
 
 char *
-next_token (s)
-     char *s;
+next_token (const char *s)
 {
-  register char *p = s;
-
-  while (isblank (*p))
-    ++p;
-  return p;
+  while (isblank ((unsigned char)*s))
+    ++s;
+  return (char *)s;
 }
 
-/* Find the next token in PTR; return the address of it, and store the
-   length of the token into *LENGTHPTR if LENGTHPTR is not nil.  */
+/* Find the next token in PTR; return the address of it, and store the length
+   of the token into *LENGTHPTR if LENGTHPTR is not nil.  Set *PTR to the end
+   of the token, so this function can be called repeatedly in a loop.  */
 
 char *
-find_next_token (ptr, lengthptr)
-     char **ptr;
-     unsigned int *lengthptr;
+find_next_token (const char **ptr, unsigned int *lengthptr)
 {
-  char *p = next_token (*ptr);
-  char *end;
+  const char *p = next_token (*ptr);
 
   if (*p == '\0')
     return 0;
 
-  *ptr = end = end_of_token (p);
+  *ptr = end_of_token (p);
   if (lengthptr != 0)
-    *lengthptr = end - p;
-  return p;
+    *lengthptr = *ptr - p;
+
+  return (char *)p;
 }
 
-/* Copy a chain of `struct dep', making a new chain
-   with the same contents as the old one.  */
+
+/* Copy a chain of 'struct dep'.  For 2nd expansion deps, dup the name.  */
 
 struct dep *
-copy_dep_chain (d)
-     register struct dep *d;
+copy_dep_chain (const struct dep *d)
 {
-  register struct dep *c;
   struct dep *firstnew = 0;
   struct dep *lastnew = 0;
 
   while (d != 0)
     {
-      c = (struct dep *) xmalloc (sizeof (struct dep));
-      bcopy ((char *) d, (char *) c, sizeof (struct dep));
-      if (c->name != 0)
-        c->name = savestring (c->name, strlen (c->name));
+      struct dep *c = xmalloc (sizeof (struct dep));
+      memcpy (c, d, sizeof (struct dep));
+
+      if (c->need_2nd_expansion)
+        c->name = xstrdup (c->name);
+
       c->next = 0;
       if (firstnew == 0)
         firstnew = lastnew = c;
@@ -492,15 +379,84 @@ copy_dep_chain (d)
 
   return firstnew;
 }
-
-#ifdef  iAPX286
-/* The losing compiler on this machine can't handle this macro.  */
 
-char *
-dep_name (dep)
-     struct dep *dep;
+/* Free a chain of 'struct dep'.  */
+
+void
+free_dep_chain (struct dep *d)
 {
-  return dep->name == 0 ? dep->file->name : dep->name;
+  while (d != 0)
+    {
+      struct dep *df = d;
+      d = d->next;
+      free_dep (df);
+    }
+}
+
+/* Free a chain of struct nameseq.
+   For struct dep chains use free_dep_chain.  */
+
+void
+free_ns_chain (struct nameseq *ns)
+{
+  while (ns != 0)
+    {
+      struct nameseq *t = ns;
+      ns = ns->next;
+      free (t);
+    }
+}
+
+
+#if !HAVE_STRCASECMP && !HAVE_STRICMP && !HAVE_STRCMPI
+/* If we don't have strcasecmp() (from POSIX), or anything that can substitute
+   for it, define our own version.  */
+
+int
+strcasecmp (const char *s1, const char *s2)
+{
+  while (1)
+    {
+      int c1 = (int) *(s1++);
+      int c2 = (int) *(s2++);
+
+      if (isalpha (c1))
+        c1 = tolower (c1);
+      if (isalpha (c2))
+        c2 = tolower (c2);
+
+      if (c1 != '\0' && c1 == c2)
+        continue;
+
+      return (c1 - c2);
+    }
+}
+#endif
+
+#if !HAVE_STRNCASECMP && !HAVE_STRNICMP && !HAVE_STRNCMPI
+/* If we don't have strncasecmp() (from POSIX), or anything that can
+   substitute for it, define our own version.  */
+
+int
+strncasecmp (const char *s1, const char *s2, int n)
+{
+  while (n-- > 0)
+    {
+      int c1 = (int) *(s1++);
+      int c2 = (int) *(s2++);
+
+      if (isalpha (c1))
+        c1 = tolower (c1);
+      if (isalpha (c2))
+        c2 = tolower (c2);
+
+      if (c1 != '\0' && c1 == c2)
+        continue;
+
+      return (c1 - c2);
+    }
+
+  return 0;
 }
 #endif
 
@@ -557,17 +513,16 @@ static enum { make, user } current_access;
 /* Under -d, write a message describing the current IDs.  */
 
 static void
-log_access (flavor)
-     char *flavor;
+log_access (const char *flavor)
 {
-  if (! debug_flag)
+  if (! ISDB (DB_JOBS))
     return;
 
   /* All the other debugging messages go to stdout,
      but we write this one to stderr because it might be
      run in a child fork whose stdout is piped.  */
 
-  fprintf (stderr, "%s access: user %lu (real %lu), group %lu (real %lu)\n",
+  fprintf (stderr, _("%s: user %lu (real %lu), group %lu (real %lu)\n"),
            flavor, (unsigned long) geteuid (), (unsigned long) getuid (),
            (unsigned long) getegid (), (unsigned long) getgid ());
   fflush (stderr);
@@ -575,7 +530,7 @@ log_access (flavor)
 
 
 static void
-init_access ()
+init_access (void)
 {
 #ifndef VMS
   user_uid = getuid ();
@@ -588,7 +543,7 @@ init_access ()
   if (user_uid == -1 || user_gid == -1 || make_uid == -1 || make_gid == -1)
     pfatal_with_name ("get{e}[gu]id");
 
-  log_access ("Initialized");
+  log_access (_("Initialized access"));
 
   current_access = make;
 #endif
@@ -599,7 +554,7 @@ init_access ()
 /* Give the process appropriate permissions for access to
    user data (i.e., to stat files, or to spawn a child process).  */
 void
-user_access ()
+user_access (void)
 {
 #ifdef  GETLOADAVG_PRIVILEGED
 
@@ -667,7 +622,7 @@ user_access ()
 
   current_access = user;
 
-  log_access ("User");
+  log_access (_("User access"));
 
 #endif  /* GETLOADAVG_PRIVILEGED */
 }
@@ -675,7 +630,7 @@ user_access ()
 /* Give the process appropriate permissions for access to
    make data (i.e., the load average).  */
 void
-make_access ()
+make_access (void)
 {
 #ifdef  GETLOADAVG_PRIVILEGED
 
@@ -715,7 +670,7 @@ make_access ()
 
   current_access = make;
 
-  log_access ("Make");
+  log_access (_("Make access"));
 
 #endif  /* GETLOADAVG_PRIVILEGED */
 }
@@ -723,7 +678,7 @@ make_access ()
 /* Give the process appropriate permissions for a child process.
    This is like user_access, but you can't get back to make_access.  */
 void
-child_access ()
+child_access (void)
 {
 #ifdef  GETLOADAVG_PRIVILEGED
 
@@ -749,14 +704,14 @@ child_access ()
     pfatal_with_name ("child_access: setregid");
 #endif
 
-  log_access ("Child");
+  log_access (_("Child access"));
 
 #endif  /* GETLOADAVG_PRIVILEGED */
 }
-
+
 #ifdef NEED_GET_PATH_MAX
 unsigned int
-get_path_max ()
+get_path_max (void)
 {
   static unsigned int value;
 

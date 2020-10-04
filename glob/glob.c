@@ -14,6 +14,10 @@
    License along with this library; see the file COPYING.LIB.  If not,
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
    Boston, MA 02111-1307, USA.  */
+#ifdef __TANDEM
+#define _XOPEN_SOURCE_EXTENDED 1
+#include <strings.h>
+#endif
 
 /* AIX requires this to be the first thing in the file.  */
 #if defined _AIX && !defined __GNUC__

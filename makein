@@ -9,16 +9,17 @@
 <GRD> SYSTYPE_FLAG =  -Wsystype=guardian
 
 # Set up compiler and its flags
-CC="${COMP_ROOT}"/usr/bin/c89
-CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wallow_cplusplus_comments -Wcolumns=79 -Wextensions -g  -Wnowarn=1506,161 -Woptimize=1 -I g
+CC="${COMP_ROOT}"/usr/bin/c99
+INCLUDES=-I. -I./glob -I/G/system/zsysdefs
+CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wallow_cplusplus_comments -Wextensions -g  -Wnowarn=1506,161 -Woptimize=1 $(INCLUDES) 
 GMAKE_EXE=gmake
-LFLAGS=$(SYSTYPE_FLAG) 
+LDFLAGS=$(SYSTYPE_FLAG) -lrld
 
 # List of object files
 objects = alloca.o  \
           ar.o \
           arscan.o \
-          command.o \
+          commands.o \
           default.o \
           dir.o \
           expand.o \
@@ -29,15 +30,20 @@ objects = alloca.o  \
           getopt1.o \
           getopt.o \
           glob/glob.o \
+          guile.o \
+          hash.o \
           implicit.o \
           job.o \
+          load.o \
           main.o \
           misc.o \
+          output.o \
           remake.o \
           read.o \
           remote-stub.o \
           rule.o \
           signame.o \
+          strcache.o \
           tandem.o \
           tandem_ext.o \
           variable.o \
@@ -46,43 +52,50 @@ objects = alloca.o  \
 
 # Link line
 $(GMAKE_EXE) : $(objects)
-<cmd> $(CC) $(LFLAGS) -o $(GMAKE_EXE) $(objects)
+<cmd> $(CC) $(LDFLAGS) -o $(GMAKE_EXE) $(objects)
 
 default : $(GMAKE_EXE)
 
 # Compilation line
-./%.o: g%.c
+%.o: g%.c
+<cmd> $(CC) -c $(CFLAGS) -o $@ $<
+glob/%.o: glob/%.c
 <cmd> $(CC) -c $(CFLAGS) -o $@ $<
 
 # Dependency details
-alloca.o       : gconfig.h
-ar.o           : gmake.h config.h signame.h filedef.h dep.h glob/fnmatch.h
-arscan.o       : gmake.h config.h signame.h 
-command.o      : gmake.h config.h signame.h dep.h filedef.h variable.h job.h command.h
-default.o      : gmake.h config.h signame.h rule.h dep.h filedef.h job.h command.h variable.h
-dir.o          : gmake.h config.h signame.h glob/glob.h
-expand.o       : gmake.h config.h signame.h filedef.h job.h command.h variable.h rule.h
-file.o         : gmake.h config.h signame.h dep.h filedef.h job.h command.h variable.h
-function.o     : gmake.h config.h signame.h filedef.h variable.h dep.h job.h command.h
-getloadavg.o   : gconfig.h
-getopt1.o      : gconfig.h getopt.h
-getopt.o       : gconfig.h getopt.h
-implicit.o     : gmake.h config.h signame.h rule.h dep.h filedef.h
-job.o          : gmake.h config.h signame.h job.h filedef.h command.h variable.h
-main.o         : gver.c make.h config.h signame.h dep.h filedef.h variable.h job.h command.h getopt.h
-misc.o         : gmake.h config.h signame.h dep.h
-read.o         : gmake.h config.h signame.h filedef.h job.h command.h dep.h
-remake.o       : gmake.h config.h signame.h dep.h filedef.h job.h command.h variable.h rule.h glob/glob.h
-remote-stub.o  : gmake.h config.h signame.h filedef.h job.h command.h
-rule.o         : gmake.h config.h signame.h dep.h filedef.h job.h command.h variable.h rule.h
-signame.o      : gconfig.h signame.h
-tandem.o       : gmake.h
-tandem_ext.o   : gmake.h
-variable.o     : gmake.h config.h signame.h dep.h filedef.h job.h command.h variable.h
-version.o      : gconfig.h
-vpath.o        : gmake.h config.h signame.h filedef.h variable.h
-glob/glob.o    : gconfig.h glob/fnmatch.h glob/glob.h
-glob/fnmatch.o : gconfig.h glob/fnmatch.h
+alloca.o       : config.h
+ar.o           : makeint.h config.h signame.h filedef.h dep.h glob/fnmatch.h
+arscan.o       : makeint.h config.h signame.h 
+commands.o     : makeint.h config.h signame.h dep.h filedef.h variable.h job.h commands.h
+default.o      : makeint.h config.h signame.h rule.h dep.h filedef.h job.h commands.h variable.h
+dir.o          : makeint.h config.h signame.h glob/glob.h
+expand.o       : makeint.h config.h signame.h filedef.h job.h commands.h variable.h rule.h
+file.o         : makeint.h config.h signame.h dep.h filedef.h job.h commands.h variable.h
+function.o     : makeint.h config.h signame.h filedef.h variable.h dep.h job.h commands.h
+getloadavg.o   : config.h
+getopt1.o      : config.h getopt.h
+getopt.o       : config.h getopt.h
+guile.o        : makeint.h gnumake.h debug.h filedef.h dep.h variable.h
+hash.o         : makeint.h hash.h
+implicit.o     : makeint.h config.h signame.h rule.h dep.h filedef.h
+job.o          : makeint.h config.h signame.h job.h filedef.h commands.h variable.h
+load.o         : makeint.h #include debug.h filedef.h variable.h
+main.o         : ver.c makeint.h config.h signame.h dep.h filedef.h variable.h job.h commands.h getopt.h
+misc.o         : makeint.h config.h signame.h dep.h
+output.o       : makeint.h job.h output.h
+read.o         : makeint.h config.h signame.h filedef.h job.h commands.h dep.h
+remake.o       : makeint.h config.h signame.h dep.h filedef.h job.h commands.h variable.h rule.h glob/glob.h
+remote-stub.o  : makeint.h config.h signame.h filedef.h job.h commands.h
+rule.o         : makeint.h config.h signame.h dep.h filedef.h job.h commands.h variable.h rule.h
+signame.o      : config.h signame.h
+strcache.o     : makeint.h hash.h
+tandem.o       : makeint.h
+tandem_ext.o   : makeint.h
+variable.o     : makeint.h config.h signame.h dep.h filedef.h job.h commands.h variable.h
+version.o      : config.h
+vpath.o        : makeint.h config.h signame.h filedef.h variable.h
+glob/glob.o    : config.h glob/fnmatch.h glob/glob.h
+glob/fnmatch.o : config.h glob/fnmatch.h
 
 # Cleaning related.
 .PHONY : clean
