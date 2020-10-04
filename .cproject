@@ -14,11 +14,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+				<configuration buildProperties="" description="" id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.263856173.296272076" name="/" resourcePath="">
 						<toolChain id="nsdee.managedbuild.toolchain.ccpp.tnsx.base.1289684435" name="C-C++ TNS-X Tools" superClass="nsdee.managedbuild.toolchain.ccpp.tnsx.base" unusedChildren="nsdee.managedbuild.ccpp.tool.c.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.c.sqlmx.pre.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.compiler.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.cpp.linker.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmx.pre.tnsx.base;nsdee.managedbuild.ccpp.tool.c.compiler.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmx.tnsx.base;nsdee.managedbuild.ccpp.tool.cobol.sqlmp.tnsx.base;nsdee.managedbuild.ccpp.tool.c.sqlmx.tnsx.base">
 							<targetPlatform archList="all" binaryParser="com.hp.nsdee.devp.core.NONSTOP_ELF" id="nsdee.managedbuild.ccpp.target.platform.tnsx.base.977718110" name="Debug Platform" osList="win32" superClass="nsdee.managedbuild.ccpp.target.platform.tnsx.base"/>
-							<builder customBuilderProperties="nsdee.compRoot.default=[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.targetSystype=oss|nsdee.posixBin=C:\\cygwin64\\bin|nsdee.compRoot=+[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.setCompRootAndPath=true|nsdee.posixBin.default=C:\\cygwin64\\bin|nsdee.preDeployTarget=|nsdee.deployTarget=deploy|nsdee.postDeployTarget=|" id="nsdee.managedbuild.ccpp.target.builder.tnsx.base.1214664279" managedBuildOn="false" name="NonStop Make Builder.Default" superClass="nsdee.managedbuild.ccpp.target.builder.tnsx.base"/>
+							<builder arguments="-f Makefile.NSX.Win" command="make" customBuilderProperties="nsdee.compRoot.default=[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.targetSystype=oss|nsdee.posixBin=C:\\cygwin64\\bin|nsdee.compRoot=+[TNS/X L16.05] C:\\Program Files (x86)\\HPE NonStop\\L16.05|nsdee.setCompRootAndPath=true|nsdee.posixBin.default=C:\\cygwin64\\bin|nsdee.preDeployTarget=|nsdee.deployTarget=deploy|nsdee.postDeployTarget=|" id="nsdee.managedbuild.ccpp.target.builder.tnsx.base.1214664279" incrementalBuildTarget="gmake" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="NonStop Make Builder" superClass="nsdee.managedbuild.ccpp.target.builder.tnsx.base"/>
 							<tool id="nsdee.managedbuild.ccpp.tool.c.compiler.tnsx.base.327320073" name="C Compiler (TNS/X)" superClass="nsdee.managedbuild.ccpp.tool.c.compiler.tnsx.base">
 								<inputType id="nsdee.managedbuild.tool.c.compiler.input.540347380" superClass="nsdee.managedbuild.tool.c.compiler.input"/>
 							</tool>
@@ -47,4 +47,9 @@
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/GMake"/>
+		</configuration>
+	</storageModule>
 </cproject>
