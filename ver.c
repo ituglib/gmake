@@ -3,10 +3,6 @@
 #pragma section VERSION_STRING
 #define VERSION_STRING "T0593H01 - (01FEB2015)" __DATE__ __TIME__
 
-#pragma section VERSION_GMAKE
-void T0593H01_01FEB15_GMAKE_19SEP14(void)
-{}
-
 #pragma section CHANGES
 /* Begin change descriptons
 -----------------------------------------------------------------------------

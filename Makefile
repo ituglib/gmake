@@ -2,6 +2,8 @@
 # for product builds.
 # DO NOT DELETE THIS LINE -- make depend uses it
 
+VPROC=$(shell sh ./version.sh)
+
 # Set the systype flag.
 SYSTYPE_FLAG = 
 
@@ -12,6 +14,8 @@ CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONF
 GMAKE_EXE=gmake
 LIBS=-ldl
 LDFLAGS=$(SYSTYPE_FLAG)
+
+.PHONY: version.o
 
 # List of object files
 objects = alloca.o  \
@@ -59,6 +63,9 @@ default : $(GMAKE_EXE)
 	$(CC) -c $(CFLAGS) -o $@ $<
 glob/%.o: glob/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
+
+version.o: version.c
+	$(CC) -c $(CFLAGS) -DVPROC=$(VPROC) -o $@ $<
 
 # Dependency details
 alloca.o       : config.h

@@ -1,5 +1,7 @@
 # DO NOT DELETE THIS LINE -- make depend uses it
 
+VPROC=$(shell sh ./version.sh)
+
 # Set up environment to use product compiler.
 <PRODUCTE> export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\J06.21
 <PRODUCTX> export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\L17.02
@@ -14,6 +16,8 @@ INCLUDES=-I. -I./glob -I/G/system/zsysdefs
 CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE -D HAVE_CONFIG_H -Wextensions -g  -Wnowarn=1506,161 -O2 $(INCLUDES) 
 GMAKE_EXE=gmake
 LDFLAGS=$(SYSTYPE_FLAG) -lrld
+
+.PHONY: version.o
 
 # List of object files
 objects = alloca.o  \
@@ -61,6 +65,10 @@ default : $(GMAKE_EXE)
 <cmd> $(CC) -c $(CFLAGS) -o $@ $<
 glob/%.o: glob/%.c
 <cmd> $(CC) -c $(CFLAGS) -o $@ $<
+
+version.o: version.c
+<cmd> $(CC) -c $(CFLAGS) -DVPROC=$(VPROC) -o $@ $<
+
 
 # Dependency details
 alloca.o       : config.h
