@@ -148,7 +148,7 @@ TNS/X or TNS/E : guardian or oss : gmake build in windows:
    TNS/E guardian target gmake: ./grde/gmake
    TNS/X guardian target gmake:./grdx/gmake
    TNS/E oss target gmake: ./osse/gmake
-   TNS/X oss target gmake: ./ossx/gamke
+   TNS/X oss target gmake: ./ossx/gmake
 
 -----
 Note:
