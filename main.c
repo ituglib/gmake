@@ -17,7 +17,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #define MY_FEOK 0
 
 #ifdef __TANDEM
-#include "ver.c (VERSION_STRING, VERSION_GMAKE)"
+#include "ver.c (VERSION_STRING)"
 #include <cextdecs.h(OLDFILENAME_TO_FILENAME_)>
 /* #include <derror.h> NOLIST */
 #ifdef _OSS_HOST
