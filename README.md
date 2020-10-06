@@ -1,6 +1,6 @@
-#GMake - GNUMake GUARDIAN Port
+# GMake - GNUMake GUARDIAN Port
 
-##Introduction
+## Introduction
 
 GMake is a GUARDIAN port of the GNUMake product. Technically, this is
 a fork of the project, with the same file names and structure. The key
