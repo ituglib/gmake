@@ -20,7 +20,7 @@ pipeline {
                                 recursiveSubmodules: true, reference: '', trackingSubmodules: false]],
                 doGenerateSubmoduleConfigurations: false, extensions: [
                     [$class: 'CleanCheckout'],
-                    [$class: 'CloneOption', timeout: 120, shallow: true],
+                    [$class: 'CloneOption', timeout: 120, shallow: false, noTags: false],
                     [$class: 'CheckoutOption', timeout: 120],
                     ],
                 userRemoteConfigs: [[url: 'https://github.com/ituglib/gmake']]])
