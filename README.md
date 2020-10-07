@@ -26,7 +26,7 @@ and submit a pull request on GitHub. It is a good idea to set up an issue
 describing the feature you are working on to give the ITUGLIB team a heads up
 on your contribution.
 
-You must fill out a [Contributor License Agreement](https://github.com/ituglib/gmake/CONTRIBUTING.md)
+You must fill out a [Contributor License Agreement](CONTRIBUTING.md)
 and send it to one of the ITUGLIB team members so that we know you have the
 authority to contribute your code.
 
