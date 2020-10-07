@@ -27,7 +27,7 @@ guidelines:
     only place the text in the GitHub pull request description.
     To amend a missing `CLA: trivial` line after submission, do the following:
 
-  [cla]: policies/cla.html
+  [cla]: policies/cla.md
 
     ```
         git commit --amend
