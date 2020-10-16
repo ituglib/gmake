@@ -43,6 +43,10 @@ const char *vmsify (const char *name, int type);
 # endif /* HAVE_VMSDIR_H */
 #endif
 
+#ifdef _GUARDIAN_TARGET
+# include <cextdecs.h>
+#endif
+
 /* In GNU systems, <dirent.h> defines this macro for us.  */
 #ifdef _D_NAMLEN
 # undef NAMLEN
@@ -746,9 +750,6 @@ file_exists_p (const char *name)
   const char *dirend;
   const char *dirname;
   const char *slash;
-#ifdef _GUARDIAN_TARGET
-  FILE *fp;
-#endif
 
 #ifndef NO_ARCHIVES
   if (ar_name (name))
@@ -756,10 +757,13 @@ file_exists_p (const char *name)
 #endif
 
 #ifdef _GUARDIAN_TARGET
-  fp = fopen(name, "r");
-  fclose(fp);
-  return fp ? 1 : 0;
-#else
+  short error = FILE_GETINFOBYNAME_(name, (short) strlen(name));
+  if (error == 0)
+    return 1;
+  if (error != 13)
+    return 0;
+  // Fall through to standard POSIX parsing.
+#endif
 #ifdef VMS
   dirend = strrchr (name, ']');
   if (dirend == 0)
@@ -786,7 +790,6 @@ file_exists_p (const char *name)
     return dir_file_exists_p ("", name);
 #endif /* AMIGA */
 #endif /* VMS */
-#endif /* GUARDIAN */
 
   slash = dirend;
   if (dirend == name)
