@@ -508,6 +508,7 @@ int launch_proc(char *argv[], char *envp[])
      plist.name_options = ZSYS_VAL_PCREATOPT_NAMEDBYSYS; /* 4 chars long */
    }
 
+   plist.name_options |= ZSYS_VAL_PCREATOPT_ALLDEFINES;
    plist.program_name = cmd;
    plist.program_name_len = (long) strlen(cmd);
    error = PROCESS_LAUNCH_((void *) &plist , &errordet, (void *) &olist,
