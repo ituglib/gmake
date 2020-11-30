@@ -847,7 +847,11 @@ ar_name_equal (const char *name, const char *mem, int truncated)
 #endif /* !AIAMAG */
     }
 
+# ifdef _GUARDIAN_TARGET
+  return !strcasecmp (name, mem);
+# else
   return !strcmp (name, mem);
+# endif
 #else
   /* VMS members do not have suffixes, but the filenames usually
      have.
