@@ -253,6 +253,10 @@ void exit (int) __attribute__ ((noreturn));
 
 #endif /* Standard headers.  */
 
+#ifdef __TANDEM
+# include <strings.h>
+#endif
+
 /* These should be in stdlib.h.  Make sure we have them.  */
 #ifndef EXIT_SUCCESS
 # define EXIT_SUCCESS 0

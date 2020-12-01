@@ -40,7 +40,7 @@
 #define HAVE_ATEXIT 1
 
 /* Use case insensitive file names */
-/* #undef HAVE_CASE_INSENSITIVE_FS */
+#define HAVE_CASE_INSENSITIVE_FS 1
 
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
