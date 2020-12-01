@@ -28,6 +28,10 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "dep.h"
 #include <glob/fnmatch.h>
 
+#if defined(_GUARDIAN_TARGET)
+# include <fcntl.h>
+# include <unistd.h>
+#endif
 /* Return nonzero if NAME is an archive-member reference, zero if not.  An
    archive-member reference is a name like 'lib(member)' where member is a
    non-empty string.
@@ -129,6 +133,9 @@ ar_touch (const char *name)
   return -1;
 }
 #else
+#define TOUCH_ERROR(call) do{ perror_with_name ((call), file->name);    \
+                              return us_failed; }while(0)
+
 int
 ar_touch (const char *name)
 {
@@ -143,6 +150,50 @@ ar_touch (const char *name)
     struct file *arfile;
     arfile = enter_file (strcache_add (arname));
     f_mtime (arfile, 0);
+# ifdef _GUARDIAN_TARGET
+    if (!arfile->updated) {
+      int fd;
+      struct file *file = arfile;
+
+      EINTRLOOP (fd, open (arfile->name, O_RDWR | O_CREAT, 0666));
+      if (fd < 0)
+        TOUCH_ERROR ("touch: open: ");
+      else
+        {
+          struct stat statbuf;
+          char buf = 'x';
+          int e;
+
+          EINTRLOOP (e, fstat (fd, &statbuf));
+          if (e < 0)
+            TOUCH_ERROR ("touch: fstat: ");
+          /* Rewrite character 0 same as it already is.  */
+          EINTRLOOP (e, read (fd, &buf, 1));
+          if (e < 0)
+            TOUCH_ERROR ("touch: read: ");
+          {
+            off_t o;
+            EINTRLOOP (o, lseek (fd, 0L, 0));
+            if (o < 0L)
+              TOUCH_ERROR ("touch: lseek: ");
+          }
+          EINTRLOOP (e, write (fd, &buf, 1));
+          if (e < 0)
+            TOUCH_ERROR ("touch: write: ");
+
+          /* If file length was 0, we just changed it, so change it back.  */
+          if (statbuf.st_size == 0)
+            {
+              (void) close (fd);
+              EINTRLOOP (fd, open (file->name, O_RDWR | O_TRUNC, 0666));
+              if (fd < 0)
+                TOUCH_ERROR ("touch: open: ");
+            }
+          (void) close (fd);
+          file->updated = 1;
+        }
+    }
+# endif
   }
 
   val = 1;
