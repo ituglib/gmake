@@ -15,6 +15,16 @@ you can do essentially what you want with the code, but you must make the
 source available to anyone. The GPLv3 license can be found 
 [here](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
+## Documentation
+
+The main manual page for GNU Make can be found at
+[https://www.gnu.org/software/make/manual/make.html](https://www.gnu.org/software/make/manual/make.html).
+Please use that site as the definitive manual for using GMake except as
+described in the extensions manual below. 
+
+The [MANUAL.md](MANUAL.md) page describes the extensions and differences with
+the GUARDIAN port, GMAKE.
+
 ## Problems and Enhancements
 
 Use the GitHub issue tracker to report problems and request enhancements.
