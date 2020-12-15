@@ -66,16 +66,16 @@ a variable. Instead, all tokens represented by a `$` followed by letters are
 considered to be disk volumes in the GUARDIAN space. The `$V` form should not
 be used. The `$(VARIABLE)` form should be used for all variable references.
 
-### Special Variables
-
-GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be
-referenced using the form:
-
-    $=DEFINE
-
-In this case, the variable will be substituted with the value of the `FILE`
-attribute of the MAP DEFINE.
-
+<!-- ### Special Variables -->
+<!--  -->
+<!-- GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be -->
+<!-- referenced using the form: --> 
+<!--  -->
+<!--     $=DEFINE -->
+<!--  -->
+<!-- In this case, the variable will be substituted with the value of the `FILE` -->
+<!-- attribute of the MAP DEFINE. -->
+<!--  -->
 ### Predefined Rules
 
 Many of the predefined rules in GNU Make have no effect in GMake because files
