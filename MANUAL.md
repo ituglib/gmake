@@ -52,7 +52,7 @@ GUARDIAN file names. Node names may not be interpreted correctly and should
 be avoided or tested before use.
 
 `$` values in GUARDIAN refer to disk volumes. The use of `$` should be clearly
-disambiguated from GMake variables using `()` characters. 
+disambiguated from GMake variables using `()` characters.
 
 ### Variable Substitution
 
@@ -69,7 +69,7 @@ be used. The `$(VARIABLE)` form should be used for all variable references.
 <!-- ### Special Variables -->
 <!--  -->
 <!-- GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be -->
-<!-- referenced using the form: --> 
+<!-- referenced using the form: -->
 <!--  -->
 <!--     $=DEFINE -->
 <!--  -->
@@ -94,6 +94,18 @@ Other substitution forms may also not work in GMake.
 
 ## Execution Differences
 
+### Predefined Variables
+
+The following predefined variables are added to GMake:
+
+| Variable  | Default            | Meaning                                                    |
+| --------- | ------------------ | -----------------------------------------------------------|
+| `SYSVOL` | `$SYSTEM.SYSTEM` | The default location of system programs.                   |
+| `OSHARGS`| `-osstty`         | Default arguments for OSH, specified in the $(SH) variable.|
+| `SH`      | `$(SYSVOL).OSH`  | The default location of OSH.                               |
+
+More variables will be defined in future releases.
+
 ### Predefined Functions
 
 Some substitution functions are not supported by GMake, including:
@@ -107,10 +119,10 @@ There are other functions that do not work in GMake.
 
 ### Shell Control
 
-GMake does not use the OSS shell to execute commands. Instead, commands are
-executed directly using the `PROCESS_LAUNCH_` method. Commands should be
-specified as they are in TACL, using the fully qualified object file names,
-for example:
+GMake does not, by default, use the OSS shell to execute commands. Instead,
+commands are executed directly using the `PROCESS_LAUNCH_` method. Commands
+should be specified as they are in TACL, using the fully qualified object file
+names, for example:
 
     $SYSTEM.SYSTEM.TAL/IN source,OUT $s.#hold/
 
@@ -127,11 +139,24 @@ are all optional:
 | `NAME`  | pname           | The name of the process to be run.                                           |
 | `DEBUG` |                 | Causes the program to be started in DEBUG mode.                              |
 
+### Running OSS Commands
+
+When running OSS commands, use the `$(SH)` predefined variable to launch commands.
+`$(SH)` expands to `$SYSTEM.SYSTEM.OSH`. The `-osstty` argument should
+generally be used when running OSS commands. It is automatically included in the
+`$(OSHARGS)` variable and referenced by `$(SH)`, for example:
+
+    $(SH) -c "echo Running a build"
+
+expands to:
+
+    $SYSTEM.SYSTEM.OSH -osstty -c "echo Running a build"
+
 ## Archives
 
 Archive targets are specified in GMake the same way as in GNU Make, as follows:
 
-    archive(MEMBER): source1 source2 ... 
+    archive(MEMBER): source1 source2 ...
 
 The caveat for archives is that member names are case insensitive and should
 be specified in upper case, but that is not required.
@@ -142,7 +167,7 @@ The following extensions are currently defined for GMake:
 
 * GUARDIAN DEFINE variable expansion.
 * Program execution using `PROCESS_LAUNCH_` instead of shell.
-* Recognition of disk and process names instead of single character variables.  
+* Recognition of disk and process names instead of single character variables.
 
 ## Appendix A
 
@@ -221,7 +246,7 @@ You may copy and distribute a Modified Version of the Document under the conditi
   12. Preserve all the Invariant Sections of the Document, unaltered in their text and in their titles. Section numbers or the equivalent are not considered part of the section titles.
   13. Delete any section Entitled “Endorsements”. Such a section may not be included in the Modified Version.
   14. Do not retitle any existing section to be Entitled “Endorsements” or to conflict in title with any Invariant Section.
-  15. Preserve any Warranty Disclaimers. 
+  15. Preserve any Warranty Disclaimers.
 
 If the Modified Version includes new front-matter sections or appendices that qualify as Secondary Sections and contain no material copied from the Document, you may at your option designate some or all of these sections as invariant. To do this, add their titles to the list of Invariant Sections in the Modified Version’s license notice. These titles must be distinct from any other section titles.
 
