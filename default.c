@@ -572,6 +572,12 @@ static const char *default_variables[] =
 #endif /* !VMS */
     /* Make this assignment to avoid undefined variable warnings.  */
     "GNUMAKEFLAGS", "",
+
+#if defined (_GUARDIAN_TARGET)
+	"SYSVOL", "$SYSTEM.SYSTEM",
+	"OSHARGS", "-osstty",
+	"SH", "$(SYSVOL).OSH $(OSHARGS)",
+#endif
     0, 0
   };
 
