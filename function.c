@@ -23,6 +23,9 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "debug.h"
 
 #ifdef __TANDEM
+#include <cextdecs.h>
+#define _XOPEN_SOURCE_EXTENDED 1
+#include <string.h>
 #include <unistd.h>
 #endif
 
@@ -2251,6 +2254,88 @@ func_abspath (char *o, char **argv, const char *funcname UNUSED)
   return o;
 }
 
+#ifdef __TANDEM
+static void _strlwr(char *s) {
+  for (; *s; s++) {
+    *s = tolower(*s);
+  }
+}
+/*
+  Convert a GUARDIAN name to an OSS name
+*/
+static char *
+func_pname (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  const char *guardian = argv[0];
+  char fileName[38];
+  char nodeName[38];
+  short nameLength = 0;
+  char ossName[256]; /* More than enough space */
+  char *p, *r;
+  short error;
+
+  if (strlen(guardian) > sizeof(fileName)-1)
+    OS (fatal, *expanding_var, _("pname: name %s too long"), guardian);
+  if (strlen(guardian) < 2)
+    OS (fatal, *expanding_var, _("pname: name %s too short"), guardian);
+  error = NODENUMBER_TO_NODENAME_(,nodeName, sizeof(nodeName), &nameLength);
+  if (error) {
+    nodeName[0] = '\0';
+  } else {
+    nodeName[nameLength] = '\0';
+  }
+
+  error = FILENAME_RESOLVE_(guardian, (short) strlen(guardian),
+                            fileName, (short)(sizeof(fileName)-1), &nameLength,
+							010 /* Resolve DEFINES */);
+  if (error)
+	return o;
+
+  if (ISDB(DB_BASIC))
+	printf("Resolved %s to %s\n", guardian, fileName);
+
+  fileName[nameLength] = '\0';
+
+  _strlwr(nodeName);
+  _strlwr(fileName);
+  if (fileName[0] == '\\') {
+	/* This is an EXPAND name. */
+    p = strchr(fileName, '.');
+    *p++ = '\0';
+    if (strcmp(fileName, nodeName) == 0) {
+      /* This is our node. Strip it. */
+      if (ISDB(DB_BASIC))
+        printf("Detected local node %s\n", nodeName);
+        strcpy(ossName, "");
+    } else {
+      strcpy(ossName, "/E/");
+      strcat(ossName, fileName+1);
+    }
+    strcat(ossName, "/G/");
+    r = strchr(p, '.');
+    *r++ = '/';
+    r = strchr(r, '.');
+    *r++ = '/';
+    strcat(ossName, p+1);
+  } else {
+    /* This is a GUARDIAN name. */
+    strcpy(ossName, "/G/");
+    r = strchr(fileName+1, '.');
+    *r++ = '/';
+    r = strchr(r, '.');
+    *r++ = '/';
+    strcat(ossName, fileName+1);
+  }
+  if (ISDB(DB_BASIC))
+    printf("pname %s -> %s\n", guardian, ossName);
+
+  o = variable_buffer_output (o, ossName, strlen (ossName));
+  return o;
+}
+
+#endif
+
 /* Lookup table for builtin functions.
 
    This doesn't have to be sorted; we use a straight lookup.  We might gain
@@ -2310,6 +2395,9 @@ static struct function_table_entry function_table_init[] =
 #ifdef EXPERIMENTAL
   FT_ENTRY ("eq",            2,  2,  1,  func_eq),
   FT_ENTRY ("not",           0,  1,  1,  func_not),
+#endif
+#ifdef __TANDEM
+  FT_ENTRY ("pname",         1,  1,  1,  func_pname),
 #endif
 };
 

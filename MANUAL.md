@@ -117,6 +117,20 @@ GMake.
 
 There are other functions that do not work in GMake.
 
+#### `$(pname file)` ####
+
+The `pname` function converts a GUARDIAN file name into an OSS path. The
+GUARDIAN name can be fully or partially qualified and does not need to exist.
+The resulting OSS path will always be fully qualified. If the EXPAND node in
+the GUARDIAN name is the same as the local node, the OSS path starts with `/G`,
+otherwise the OSS path starts with `/E`. The function is similar to the OSS
+command `pname -s guardian-file`.
+
+**Example:**
+
+    SRC = $VOL.SUBVOL.FILE
+    OSS_SRC = $(pname $(SRC))
+
 ### Shell Control
 
 GMake does not, by default, use the OSS shell to execute commands. Instead,
