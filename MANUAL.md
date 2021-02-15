@@ -153,6 +153,11 @@ are all optional:
 | `NAME`  | pname           | The name of the process to be run.                                           |
 | `DEBUG` |                 | Causes the program to be started in DEBUG mode.                              |
 
+The `NAME` option is always used, by default. Specifying `/NAME/` without a
+process name will use a system generated name, as would not specifying the
+option at all. `/NAME $pn1` would create a process with the name `$pn` instead
+of a system generated name. 
+
 ### Running OSS Commands
 
 When running OSS commands, use the `$(SH)` predefined variable to launch commands.
