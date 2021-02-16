@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 14 December 2020, was written for the 4.1g2
+This edition, last updated on 16 February 2021, was written for the 4.1g4
 version of GMake, based on GNU Make 4.1. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -155,7 +155,7 @@ are all optional:
 
 The `NAME` option is always used, by default. Specifying `/NAME/` without a
 process name will use a system generated name, as would not specifying the
-option at all. `/NAME $pn1` would create a process with the name `$pn` instead
+option at all. `/NAME $pn1/` would create a process with the name `$pn` instead
 of a system generated name. 
 
 ### Running OSS Commands
