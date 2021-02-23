@@ -369,7 +369,7 @@
 #define PACKAGE "make"
 
 /* Version number of package */
-#define VERSION "4.1g"
+#define VERSION "4.1g4"
 
 /* Build host information. */
 #ifdef _TNS_E_TARGET
