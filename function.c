@@ -2261,6 +2261,44 @@ static void _strlwr(char *s) {
   }
 }
 /*
+  Sleep builtin (available on NonStop because there is no one in TACL that is easy to use).
+*/
+static char *
+func_delay (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument(s).  */
+  const char *amount = argv[0];
+  char *units;
+  char *endp = NULL;
+  long long value;
+
+  value = strtoll(amount, &endp, 10);
+  if (value <= 0)
+    OS (fatal, *expanding_var, _("delay: must be positive"), amount);
+  if (*endp && *endp != ' ')
+    OS (fatal, *expanding_var, _("delay: extra characters"), amount);
+  if (*endp == ' ') {
+    units = endp+1;
+    if (units) {
+	if (strcmp(units, "seconds") == 0) {
+	  value *= 1000000LL;
+	} else if (strcmp(units, "minutes") == 0) {
+	  value *= 60000000LL;
+	} else if (strcmp(units, "milliseconds") == 0) {
+	  value *= 1000LL;
+	} else if (strcmp(units, "microseconds") == 0) {
+	} else if (strcmp(units, "hours") == 0) {
+	  value *= 3600000000LL;
+	} else
+      OS (fatal, *expanding_var, _("delay: units must be 'seconds', 'minutes', 'milliseconds', 'microseconds', 'hours', not '%s'"), units);
+    }
+  }
+
+  PROCESS_DELAY_(value);
+
+  return o;
+}
+/*
   Convert a GUARDIAN name to an OSS name
 */
 static char *
@@ -2397,6 +2435,7 @@ static struct function_table_entry function_table_init[] =
   FT_ENTRY ("not",           0,  1,  1,  func_not),
 #endif
 #ifdef __TANDEM
+  FT_ENTRY ("delay",         1,  2,  1,  func_delay),
   FT_ENTRY ("pname",         1,  1,  1,  func_pname),
 #endif
 };

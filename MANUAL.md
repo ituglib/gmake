@@ -131,6 +131,13 @@ GMake.
 
 There are other functions that do not work in GMake.
 
+#### `$(delay time units)` (GMaken Only)
+
+The `$(delay time units)` function causes the current recipe to delay for
+some period of time. This is similar to calling sleep in OSS. _time_ must be a
+positive integer. _units_ can be one of: **microseconds** (the default);
+**milliseconds**; **seconds**; **minutes**; or **hours**.
+
 #### `$(pname file)` ####
 
 The `pname` function converts a GUARDIAN file name into an OSS path. The
