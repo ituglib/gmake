@@ -234,6 +234,12 @@ int inhibit_print_directory_flag = 0;
 
 int print_version_flag = 0;
 
+#if defined _GUARDIAN_TARGET
+/* Nonzero means use legacy completion code interpretation, specifically CC=1 is the same as CC=0.  */
+
+int legacy_cc = 0;
+#endif
+
 /* List of makefiles given with -f switches.  */
 
 static struct stringlist *makefiles = 0;
@@ -468,6 +474,9 @@ static const struct command_switch switches[] =
       "warn-undefined-variables" },
     { CHAR_MAX+6, strlist, &eval_strings, 1, 0, 0, 0, 0, "eval" },
     { CHAR_MAX+7, string, &sync_mutex, 1, 1, 0, 0, 0, "sync-mutex" },
+#if defined _GUARDIAN_TARGET
+    { CHAR_MAX+10, flag, &legacy_cc, 1, 1, 0, 0, 0, "legacy-cc" },
+#endif
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
   };
 
@@ -1074,6 +1083,10 @@ main (int argc, char **argv, char **envp)
   /* start off assuming we have no shell */
   unixy_shell = 0;
   no_default_sh_exe = 1;
+#endif
+
+#if defined _GUARDIAN_TARGET
+  legacy_cc = getenv("LEGACY-CC") && (strcmp(getenv("LEGACY-CC"), "1") == 0);
 #endif
 
   output_init (&make_sync);

@@ -28,4 +28,13 @@
   /monitor launchee for completion to get it's return code.
 */
 int launch_proc(char *argv[], char *envp[]);
+
+/**
+ * Check whether the exit code of a command should be reported as an ignored tandem warning
+ * @param exit_code the exit code reported.
+ * @param command the command supplied.
+ * @return 1 if the command should be reported as a warning - 0 if the command should fail.
+ */
+int
+ignore_tandem_warning(int exit_code, const char *command);
 #endif /* _MAKE_TANDEM_H_ */

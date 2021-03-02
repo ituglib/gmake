@@ -29,6 +29,8 @@
 
 #define PROCDEATH_PREMATURE 3 /* Proc Calls App. C Completion Codes: file? */
 
+extern int legacy_cc;
+
 /* capture calls to unsupported functions */
 
 #ifndef HAVE_CONFIG_H /* for testing without gmake */
@@ -689,6 +691,30 @@ int launch_proc(char *argv[], char *envp[])
 
    FILE_CLOSE_(filenum);
    return procrc;
+}
+
+const char *ignoreWarnings[] = {
+		"$SYSTEM.SYSTEM.DDL",
+		NULL,
+};
+
+#define PROCDEATH_WARNING 1 /* Proc Calls App. C Completion Codes: file? */
+int ignore_tandem_warning(int exit_code, const char *command_line) {
+	if (exit_code != PROCDEATH_WARNING)
+		return 1;
+	if (legacy_cc)
+		return 0;
+	for (size_t index=0; ignoreWarnings[index]; index++) {
+		const char *s = command_line;
+		while (*s == ' ')
+			s++;
+		const char *t = s;
+		while (*t == '$' || isalpha(*t) || *t == '.')
+			t++;
+		if (strncasecmp(ignoreWarnings[index], s, t-s) == 0)
+			return 0;
+	}
+	return 1;
 }
 
 #else

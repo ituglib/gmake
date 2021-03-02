@@ -536,12 +536,16 @@ child_error (struct child *child,
         exit_code, post);
 #else
 #ifdef _GUARDIAN_TARGET /* Point out a warning if there was one! */
-  if (exit_code == PROCDEATH_WARNING)
+  if (!ignore_tandem_warning(exit_code, child->command_lines[0]))
     error(NILF, l + INTSTR_LENGTH, _("*** [%s] Warning %d"), nm, exit_code);
-#endif /* Tandem */
+  else if (exit_sig == 0)
+	error (NILF, l + INTSTR_LENGTH,
+		   _("%s[%s: %s] Error %d%s"), pre, nm, f->name, exit_code, post);
+#else
   if (exit_sig == 0)
     error (NILF, l + INTSTR_LENGTH,
-           _("%s[%s] Error %d%s"), pre, f->name, exit_code, post);
+           _("%s[%s: %s] Error %d%s"), pre, nm, f->name, exit_code, post);
+#endif /* Tandem */
   else
     {
       const char *s = strsignal (exit_sig);
@@ -894,11 +898,18 @@ reap_children (int block, int err)
 
       dontcare = c->dontcare;
 
-      if (child_failed && !c->noerror && !ignore_errors_flag
 #ifdef _GUARDIAN_TARGET /* Treat warnings like ignored errors so a message is shown */
-              && exit_code != PROCDEATH_WARNING
+      if (child_failed && !c->noerror && !ignore_errors_flag
+              && !ignore_tandem_warning(exit_code, c->command_lines[0]))
+        {
+    	  if (!dontcare && child_failed == MAKE_FAILURE)
+    		child_error (c, exit_code, exit_sig, coredump, 0);
+    	  child_failed = MAKE_SUCCESS;
+    	  c->noerror = 1;
+        }
 #endif
-   		  )
+
+      if (child_failed && !c->noerror && !ignore_errors_flag)
         {
           /* The commands failed.  Write an error message,
              delete non-precious targets, and abort.  */
