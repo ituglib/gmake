@@ -434,9 +434,11 @@ static const char *default_variables[] =
 
 #else /* !VMS */
 
+#ifndef _GUARDIAN_TARGET
     "AR", "ar",
     "ARFLAGS", "rv",
     "AS", "as",
+#endif
 #ifdef GCC_IS_NATIVE
     "CC", "gcc",
 # ifdef __MSDOS__
@@ -445,6 +447,60 @@ static const char *default_variables[] =
     "CXX", "gcc",
 # endif /* __MSDOS__ */
     "OBJC", "gcc",
+#elif defined(_GUARDIAN_TARGET)
+	"SYSVOL", "$SYSTEM.SYSTEM",
+	"NSGITVOL", "$SYSTEM.NSGIT",
+    "AR", "$(SYSVOL).AR",
+    "ARFLAGS", "rv",
+	"CC", "$(SYSVOL).C",
+	"CPP", "$(SYSVOL).C",
+	"NMC", "$(SYSVOL).NMC",
+	"TAL", "$(SYSVOL).TAL",
+	"OSHARGS", "-osstty",
+	"SH", "$(SYSVOL).OSH $(OSHARGS)",
+	"OSH", "$(SYSVOL).OSH $(OSHARGS)",
+	"COBOL85", "$(SYSVOL).COBOL85",
+	"CCOMP", "$(SYSVOL).CCOMP",
+	"CPPCOMP", "$(SYSVOL).CPPCOMP",
+	"CFRONT", "$(SYSVOL).CFRONT",
+	"SCOBOL", "$(SYSVOL).SCOBOLX",
+	"SCOBOLX", "$(SYSVOL).SCOBOLX",
+	"ENABLE", "$(SYSVOL).ENABLE",
+	"FUP", "$(SYSVOL).FUP",
+	"OCA", "$(SYSVOL).OCA",
+	"BIND", "$(SYSVOL).BIND",
+	"SQLCI", "$(SYSVOL).SQLCI",
+	"SQLCOMP", "$(SYSVOL).SQLCOMP",
+	"SPOOLCOM", "$(SYSVOL).SPOOLCOM",
+	"GMAKEDEP", "$(NSGITVOL).GMAKEDEP",
+	"TACL", "$(SYSVOL).TACL",
+	"DDL", "$(SYSVOL).DDL",
+	"AXCEL", "$(SYSVOL).AXCEL",
+	"CTOEDIT", "$(SYSVOL).CTOEDIT",
+	"EDITTOC", "$(SYSVOL).EDITTOC",
+	"FORTRAN", "$(SYSVOL).FORTRAN",
+	"PATHCOM", "$(SYSVOL).PATHCOM",
+	"PDMCOM", "$(SYSVOL).PDMCOM",
+	"SCUP", "$(SYSVOL).SCUP",
+	"TEMPL", "$(SYSVOL).TEMPL",
+	"TEMPLI", "$(SYSVOL).TEMPLI",
+	"EDIT", "$(SYSVOL).EDIT",
+	"TFORM", "$(SYSVOL).TFORM",
+	"TGAL", "$(SYSVOL).TGAL",
+	"VPROC", "$(SYSVOL).VPROC",
+#if defined (_TNS_E_TARGET)
+	"COBOL", "$(SYSVOL).ECOBOL",
+	"COBEX", "$(SYSVOL).ECOBEX0",
+	"PTAL", "$(SYSVOL).EPTAL",
+	"LD", "$(SYSVOL).ELD",
+#elif defined (_TNS_X_TARGET)
+	"COBOL", "$(SYSVOL).XCOBOL",
+	"COBEX", "$(SYSVOL).XCOBEX0",
+	"PTAL", "$(SYSVOL).XPTAL",
+	"LD", "$(SYSVOL).XLD",
+#endif
+	"NSGIT", "$(NSGITVOL).NSGIT",
+
 #else
     "CC", "cc",
     "CXX", "g++",
@@ -572,12 +628,6 @@ static const char *default_variables[] =
 #endif /* !VMS */
     /* Make this assignment to avoid undefined variable warnings.  */
     "GNUMAKEFLAGS", "",
-
-#if defined (_GUARDIAN_TARGET)
-	"SYSVOL", "$SYSTEM.SYSTEM",
-	"OSHARGS", "-osstty",
-	"SH", "$(SYSVOL).OSH $(OSHARGS)",
-#endif
     0, 0
   };
 
