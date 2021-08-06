@@ -27,6 +27,334 @@
 #include "tandem.h"
 #include "debug.h"
 
+typedef struct ParamEntry_ {
+	char *name;
+	char *value;
+} ParamEntry;
+
+typedef struct AssignEntry_ {
+	char *name;
+	assign_msg_type *value;
+} AssignEntry;
+
+static size_t _num_params = 0;
+static ParamEntry *_params = NULL;
+
+static size_t _num_assigns = 0;
+static AssignEntry *_assigns = NULL;
+
+/**
+ * Upshift a string.
+ * @param string the string to upshift.
+ * @return a pointer to the start of the string.
+ */
+static char *_strupr(char *string) {
+	for (size_t i=0;string[i]; i++) {
+		string[i] = toupper(string[i]);
+	}
+	return string;
+}
+
+static short get_param_msg_local(param_msg_type *pmt, short *plen) {
+	if (_num_params > 0) {
+		char *s;
+		size_t index;
+		memset(pmt, 0, sizeof(param_msg_type));
+		pmt->msg_code = -3; /* Param Message. */
+		s = pmt->parameters;
+		/* parameters: 0 - name len, 1 for n - name, n + 1: val len, n + 2: val */
+		for (index = 0; index < _num_params; index++) {
+			size_t remaining = sizeof(pmt->parameters)
+					- (size_t) (s - pmt->parameters);
+			size_t length;
+			ParamEntry *entry = _params + index;
+
+			if (strlen(entry->name) + strlen(entry->value) + 2 > remaining) {
+				OS(message, 0, "Insufficient environment space for %s",
+						entry->name);
+				continue;
+			}
+			(pmt->num_params)++;
+			length = strlen(entry->name);
+			*s++ = (unsigned char) length;
+			strncpy(s, entry->name, length);
+			s += length;
+			length = strlen(entry->value);
+			*s++ = (unsigned char) length;
+			strncpy(s, entry->value, length);
+			s += length;
+		}
+		*plen = sizeof(*pmt) - sizeof(pmt->parameters) + (s - pmt->parameters);
+		return 0;
+	}
+	return -1;
+}
+
+static short parse_assign_file(const char *value, char *filename) {
+	short error, length;
+	char fullName[ZSYS_VAL_LEN_FILENAME + 1];
+
+	error = FILENAME_RESOLVE_(value, (short) strlen(value), fullName,
+			(short) (sizeof(fullName) - 1), &length,
+			0x0003 /* Keep Subvol, Upshift */);
+	if (error)
+		return error;
+	fullName[length] = '\0';
+
+	memset(filename, ' ', 24);
+	error = FILENAME_DECOMPOSE_(fullName, (short) strlen(fullName),
+			(filename+0), 8, &length, 0);
+	error = FILENAME_DECOMPOSE_(fullName, (short) strlen(fullName),
+			(filename+8), 8, &length, 1);
+	error = FILENAME_DECOMPOSE_(fullName, (short) strlen(fullName),
+			(filename+16), 8, &length, 2);
+	if (memcmp(filename+16, "        ", 8) == 0) {
+		/* Special subvolume mangling. Looks like a file. */
+		memcpy(filename+16, filename+8, 8);
+		memset(filename+8, ' ', 8);
+	}
+	return error;
+}
+
+void tandem_set_param(const char *name, const char *value) {
+	ParamEntry *entry;
+	size_t index;
+
+	for (index = 0; index < _num_params; index++) {
+		entry = _params + index;
+		if (strcasecmp(entry->name, name) == 0) {
+			// It is this entry.
+			free(entry->value);
+			entry->value = xstrdup(value);
+			if (ISDB(DB_BASIC))
+				printf("PARAM %s %s replaced\n", entry->name, entry->value);
+			return;
+		}
+	}
+	/* If we get here, the param is new */
+	_params = realloc(_params, sizeof(ParamEntry) * (_num_params + 1));
+	entry = _params + _num_params;
+	memset(entry, 0, sizeof(ParamEntry));
+	entry->name = xstrdup(name);
+	_strupr(entry->name);
+	entry->value = xstrdup(value);
+	_num_params++;
+
+	if (ISDB(DB_BASIC))
+		printf("PARAM %s %s added\n", entry->name, entry->value);
+}
+
+void tandem_clear_param(const char *name) {
+	ParamEntry *entry;
+	size_t index;
+
+	if (strcmp(name, "*") == 0) {
+		for (index = 0; index < _num_params; index++) {
+			entry = _params + index;
+			if (ISDB(DB_BASIC))
+				printf("PARAM %s removed\n", entry->name);
+			free(entry->name);
+			free(entry->value);
+		}
+		_num_params = 0;
+	} else {
+		for (index = 0; index < _num_params; index++) {
+			entry = _params + index;
+			if (strcasecmp(entry->name, name) == 0) {
+				// It is this entry to remove.
+				if (ISDB(DB_BASIC))
+					printf("PARAM %s removed\n", entry->name);
+				free(entry->name);
+				free(entry->value);
+
+				if (index != _num_params - 1) {
+					memmove(entry, entry + 1,
+							sizeof(ParamEntry) * (_num_params - index - 1));
+				}
+				_num_params--;
+				break;
+			}
+		}
+	}
+}
+
+short tandem_set_assign(const char *name, const char *value) {
+	AssignEntry *entry;
+	size_t index;
+	short error;
+
+	for (index = 0; index < _num_assigns; index++) {
+		entry = _assigns + index;
+		if (strcasecmp(entry->name, name) == 0) {
+			// It is this entry.
+			error = parse_assign_file(value,
+					&(entry->value->filename.whole[0]));
+			if (error != 0)
+				return error;
+			if (ISDB(DB_BASIC)) {
+				char fullName[ZSYS_VAL_LEN_FILENAME + 1];
+				short length = FNAMECOLLAPSE(
+						(short *) (entry->value->filename.whole), fullName);
+				fullName[length] = '\0';
+				printf("ASSIGN %s %s replaced\n", entry->name, fullName);
+			}
+			return 0;
+		}
+	}
+	/* If we get here, the assign is new */
+	_assigns = realloc(_assigns, sizeof(AssignEntry) * (_num_assigns + 1));
+	entry = _assigns + _num_assigns;
+	memset(entry, 0, sizeof(AssignEntry));
+	entry->name = xstrdup(name);
+	_strupr(entry->name);
+	entry->value = calloc(1, sizeof(assign_msg_type));
+	entry->value->msg_code = -2;
+	memset(&(entry->value->logical_unit_name), ' ',
+			sizeof(entry->value->logical_unit_name));
+	entry->value->logical_unit_name.prognamelen = 0;
+	entry->value->logical_unit_name.filenamelen = strlen(entry->name);
+	memcpy(entry->value->logical_unit_name.filename, entry->name,
+			strlen(entry->name));
+	error = parse_assign_file(value, &(entry->value->filename.whole[0]));
+	if (error != 0) {
+		free(entry->name);
+		free(entry->value);
+		return error;
+	}
+	entry->value->field_mask = 0x80000000; /* Only the file name */
+	_num_assigns++;
+
+	if (ISDB(DB_BASIC)) {
+		char fullName[ZSYS_VAL_LEN_FILENAME + 1];
+		short length = FNAMECOLLAPSE(
+				(short *) (entry->value->filename.whole), fullName);
+		fullName[length] = '\0';
+		printf("ASSIGN %s %s added\n", entry->name, fullName);
+	}
+	return 0;
+}
+
+void tandem_clear_assign(const char *name) {
+	AssignEntry *entry;
+	size_t index;
+
+	if (strcmp(name, "*") == 0) {
+		for (index = 0; index < _num_assigns; index++) {
+			entry = _assigns + index;
+			if (ISDB(DB_BASIC))
+				printf("ASSIGN %s removed\n", entry->name);
+			free(entry->name);
+			free(entry->value);
+		}
+		_num_assigns = 0;
+	} else {
+		for (index = 0; index < _num_assigns; index++) {
+			entry = _assigns + index;
+			if (strcasecmp(entry->name, name) == 0) {
+				// It is this entry to remove.
+				if (ISDB(DB_BASIC))
+					printf("ASSIGN %s removed\n", entry->name);
+				free(entry->name);
+				free(entry->value);
+
+				if (index != _num_assigns - 1) {
+					memmove(entry, entry + 1,
+							sizeof(AssignEntry) * (_num_assigns - index - 1));
+				}
+				_num_assigns--;
+				break;
+			}
+		}
+	}
+}
+
+void tandem_initialize(void) {
+	short rc, plen, index;
+	short num;
+	param_msg_type pmt;
+	assign_msg_type amt;
+	char *s, *t;
+
+	rc = get_param_msg(&pmt, &plen); /* all params are in one message */
+	if (rc == 0) {
+		_params = calloc(1, sizeof(ParamEntry));
+		s = &(pmt.parameters[0]);
+		for (index=0; index<pmt.num_params; index++) {
+			short name_size = *s++;
+			short value_size;
+			ParamEntry *entry;
+
+			t = s+name_size;
+			value_size = *t++;
+			_params = realloc(_params, sizeof(ParamEntry)*(_num_params+1));
+			
+			entry = _params + _num_params;
+			memset(entry, 0, sizeof(ParamEntry));
+			entry->name = malloc(name_size+1);
+			strncpy(entry->name, s, name_size);
+			entry->name[name_size] = '\0';
+			entry->value = malloc(value_size+1);
+			strncpy(entry->value, t, value_size);
+			entry->value[value_size] = '\0';
+			_num_params++;
+			s = t+value_size;
+		}
+	} else {
+		_params = calloc(1, sizeof(ParamEntry));
+	}
+
+#ifdef _GUARDIAN_TARGET
+	num = get_max_assign_msg_ordinal(); /* number of assigns */
+#else
+	/* NOTE: This needs to be fixed for OSS build. This will not happen      */
+	/*       in this fork.                                                   */
+	/* Currently we don't build/support this version of gmake in oss         */
+	/* If at all one ports this gmake to oss, this variable and associated   */
+	/* code needs to be fixed                                                */
+	num = 0;
+#endif
+	if (num == 0) {
+		_assigns = calloc(1, sizeof(AssignEntry));
+	} else {
+		_assigns = calloc(num, sizeof(AssignEntry));
+	}
+	if (ISDB(DB_BASIC))
+		printf("launch_proc get_max_assign_msg_ordinal returned %d\n", num);
+	for (index = 1; index <= num; index++) { /* send each one */
+		AssignEntry *entry = _assigns + (index - 1);
+		rc = get_assign_msg((short) index, &amt);
+		if (ISDB(DB_BASIC)) {
+			char filename3[ZSYS_VAL_LEN_FILENAME];
+			short size1, error;
+
+			printf(
+					"launch_proc get_assign_msg returned %d, %d, %.*s, %.*s, "
+							"0x%x, %.24s\n", rc, amt.msg_code,
+					amt.logical_unit_name.prognamelen,
+					amt.logical_unit_name.progname,
+					amt.logical_unit_name.filenamelen,
+					amt.logical_unit_name.filename, amt.field_mask,
+					amt.filename.whole);
+			/* in out outmax outlen */
+			error = OLDFILENAME_TO_FILENAME_((short *) amt.filename.whole,
+					filename3, sizeof(filename3), &size1);
+			printf("launch_proc OLDFILENAME_TO_FILENAME_ returned %d\n",
+					error);
+			if (!error) {
+				filename3[size1] = 0;
+				printf("launch_proc filename = %.*s, size = %d\n", size1,
+						filename3, size1);
+			}
+		}
+		entry->name = malloc(amt.logical_unit_name.filenamelen+1);
+		strncpy(entry->name, amt.logical_unit_name.filename, amt.logical_unit_name.filenamelen);
+		entry->name[amt.logical_unit_name.filenamelen] = '\0';
+		entry->value = malloc(sizeof(assign_msg_type));
+		memcpy(entry->value, &amt, sizeof(amt));
+		_num_assigns++;
+	}
+}
+
 #define PROCDEATH_PREMATURE 3 /* Proc Calls App. C Completion Codes: file? */
 
 extern int legacy_cc;

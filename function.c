@@ -33,6 +33,10 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "amiga.h"
 #endif
 
+#ifdef _GUARDIAN_TARGET
+#include "tandem.h"
+#endif
+
 struct function_table_entry
   {
     union {
@@ -2371,6 +2375,85 @@ func_pname (char *o, char **argv, const char *funcname)
   o = variable_buffer_output (o, ossName, strlen (ossName));
   return o;
 }
+/*
+  Add a PARAM to the process context.
+*/
+static char *
+func_param_add (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  char *name = argv[0];
+  char *value = strchr(name, ' ');
+
+  if (!value)
+    OS (fatal, *expanding_var, _("param: missing value"), name);
+  *value++ = '\0';
+  if (strlen(name) > 31)
+    OS (fatal, *expanding_var, _("param: name %s too long"), name);
+
+  if (*value == '"') {
+    if (value[strlen(value)-1] != '"')
+      OS (fatal, *expanding_var, _("param: expecting quote %s"), name);
+    value[strlen(value)-1] = '\0';
+    value++;
+  }
+
+  tandem_set_param(name, value);
+
+  return o;
+}
+
+/*
+  Add a PARAM to the process context.
+*/
+static char *
+func_param_clear (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  char *name = argv[0];
+
+  tandem_clear_param(name);
+
+  return o;
+}
+
+/*
+  Add an ASSIGN to the process context.
+*/
+static char *
+func_assign_add (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  char *name = argv[0];
+  char *value = strchr(name, ',');
+  short error;
+
+  if (!value)
+    OS (fatal, *expanding_var, _("assign: missing file/subvolume"), name);
+  *value++ = '\0';
+  if (strlen(name) > 31)
+    OS (fatal, *expanding_var, _("param: name %s too long"), name);
+
+  error = tandem_set_assign(name, value);
+  if (error)
+	OSN (fatal, *expanding_var, _("assign: unable to resolve %s error %d"), value, error);
+
+  return o;
+}
+
+/*
+  Add an ASSIGN to the process context.
+*/
+static char *
+func_assign_clear (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  char *name = argv[0];
+
+  tandem_clear_assign(name);
+
+  return o;
+}
 
 #endif
 
@@ -2437,6 +2520,10 @@ static struct function_table_entry function_table_init[] =
 #ifdef __TANDEM
   FT_ENTRY ("delay",         1,  2,  1,  func_delay),
   FT_ENTRY ("pname",         1,  1,  1,  func_pname),
+  FT_ENTRY ("param",         1,  1,  1,  func_param_add),
+  FT_ENTRY ("clear_param",   1,  1,  1,  func_param_clear),
+  FT_ENTRY ("assign",        1,  1,  1,  func_assign_add),
+  FT_ENTRY ("clear_assign",  1,  1,  1,  func_assign_clear),
 #endif
 };
 

@@ -177,7 +177,28 @@ are all optional:
 The `NAME` option is always used, by default. Specifying `/NAME/` without a
 process name will use a system generated name, as would not specifying the
 option at all. `/NAME $pn1/` would create a process with the name `$pn` instead
-of a system generated name. 
+of a system generated name.
+
+### Special Commands
+
+The `PARAM` command is supported by `GMAKEN` in recipes. `PARAMs` can be
+quoted or unquoted:
+
+    PARAM SWAPVOL $SYSTEM
+
+The `ASSIGN` command is also supported in recipes. `ASSIGNs` can specify
+either a sub-volume or a file. As with the `$(assign)` function, extended
+attributes are not supported.
+
+    ASSIGN SSV0,$SYSTEM.SYSTEM
+
+The `CLEAR` command can be used to remove either `ASSIGNs` or `PARAMs` as
+follows:
+
+    CLEAR PARAM ALL
+    CLEAR PARAM SWAPVOL
+    CLEAR ASSIGN ALL
+    CLEAR ASSIGN SSV0
 
 ### Running OSS Commands
 

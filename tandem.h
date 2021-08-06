@@ -2,6 +2,38 @@
 #define _MAKE_TANDEM_H_
 
 /**
+ * Initialize internal variables for the tandem module.
+ */
+void tandem_initialize(void);
+
+/**
+ * Set the value of a parameter.
+ * @param name the parameter name.
+ * @param value the parameter value.
+ */
+void tandem_set_param(const char *name, const char *value);
+
+/**
+ * Clear the value of a parameter.
+ * @param name the parameter name.
+ */
+void tandem_clear_param(const char *name);
+
+/**
+ * Set the value of an assign.
+ * @param name the assign name.
+ * @param value the assign file/subvolume.
+ * @return 0 if the assign could be parsed, a GUARDIAN error otherwise.
+ */
+short tandem_set_assign(const char *name, const char *value);
+
+/**
+ * Clear the value of a parameter.
+ * @param name the parameter name.
+ */
+void tandem_clear_assign(const char *name);
+
+/**
   Launch a process to run the specified command...
 
   Need to:

@@ -1086,6 +1086,7 @@ main (int argc, char **argv, char **envp)
 #endif
 
 #if defined _GUARDIAN_TARGET
+  tandem_initialize();
   legacy_cc = getenv("LEGACY-CC") && (strcmp(getenv("LEGACY-CC"), "1") == 0);
 #endif
 
