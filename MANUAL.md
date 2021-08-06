@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 24 February 2021, was written for the 4.1g5
+This edition, last updated on 06 August 2021, was written for the 4.1g5
 version of GMake, based on GNU Make 4.1. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -117,6 +117,48 @@ The following predefined variables are added to GMake:
 | `SYSVOL` | `$SYSTEM.SYSTEM` | The default location of system programs.                   |
 | `OSHARGS`| `-osstty`         | Default arguments for OSH, specified in the $(SH) variable.|
 | `SH`      | `$(SYSVOL).OSH`  | The default location of OSH.                               |
+| `ARFLAGS`  | `rv`                  | AR program standard arguments.                            |
+| `AR`        | `$(SYSVOL).AR`      | Object Archive program location.                           |
+| `AXCEL`     | `$(SYSVOL).AXCEL`  | Non-Native Object Acceleration program location.           |
+| `BIND`     | `$(SYSVOL).BIND`     | BINDER program object location.                           |
+| `CC`        | `$(SYSVOL).C`        | C compiler program location.                              |
+| `COBEX`    | `$(SYSVOL).XCOBEX0`   | COBEX program location. `XCOBEX0` on J-series.         |
+| `COBOL`    | `$(SYSVOL).XCOBOL`    | Native COBOL program location. `ECOBOL` on J-series.    |
+| `COBOL85`  | `$(SYSVOL).COBOL85` | COBOL85 compiler program location.                        |
+| `CCOMP`    | `$(SYSVOL).CCOMP`    | CCOMP compiler program location.                          |
+| `CFRONT`   | `$(SYSVOL).CFRONT`   | CFRONT preprocessor program location.                     |
+| `CPP`       | `$(SYSVOL).C`        | C++ compiler program location.                            |
+| `CPPCOMP`  | `$(SYSVOL).CPPCOMP`  | C++ compiler  program location.                          |
+| `CTOEDIT`  | `$(SYSVOL).CTOEDIT`  | C-to-Edit conversion program location.                    |
+| `DDL`       | `$(SYSVOL).DDL`      | DDL compiler program location.                            |
+| `ENABLE`   | `$(SYSVOL).ENABLE`   | ENABLE  program location.                                 |
+| `EDIT`     | `$(SYSVOL).EDIT`      | EDIT utility program location.                           |
+| `EDITTOC`  | `$(SYSVOL).EDITTOC`  | Edit-to-C conversion program location.                    |
+| `FORTRAN`  | `$(SYSVOL).FORTRAN`  | FORTRAN compiler program location.                        |
+| `FUP`      | `$(SYSVOL).FUP`       | FUP utility program location.                             |
+| `LD`       | `$(SYSVOL).XLD`        | Linker program location. `ELD` on J-series.             |
+| `NMC`       | `$(SYSVOL).NMC`      | NMC compiler program location.                            |
+| `OCA`      | `$(SYSVOL).OCA`       | OCA program location.                                     |
+| `OSH`       | `$(SYSVOL).OSH $(OSHARGS)` | The default location of OSH and arguments.        |
+| `PATHCOM`  | `$(SYSVOL).PATHCOM`   | PATHCOM program location.                                |
+| `PDMCOM`   | `$(SYSVOL).PDMCOM`    | PDMCOM program location.                                 |
+| `PTAL`     | `$(SYSVOL).XPTAL`     | PTAL program location. `EPTAL` on J-series              |
+| `SCOBOL`   | `$(SYSVOL).SCOBOLX`  | SCOBOL compiler program location.                         |
+| `SCOBOLX`  | `$(SYSVOL).SCOBOLX`  | Alternate SCOBOL compiler program location.               |
+| `SCUP`     | `$(SYSVOL).SCUP`      | SCUP utility program location.                           |
+| `TACL`     | `$(SYSVOL).TACL`      | TACL interpreter program location.                        |
+| `TAL`       | `$(SYSVOL).TAL`      | TAL compiler program location.                            |
+| `TEMPL`    | `$(SYSVOL).TEMPL`     | TEMPL compiler program location.                          |
+| `TEMPLI`   | `$(SYSVOL).TEMPLI`    | Template installer program location.                     |
+| `TFORM`    | `$(SYSVOL).TFORM`     | TFORM documenter program location.                        |
+| `TGAL`     | `$(SYSVOL).TGAL`      | TGAL documenter program location.                         |
+| `SQLCI`    | `$(SYSVOL).SQLCI`     | SQLCI interpreter program location.                       |
+| `SQLCOMP`  | `$(SYSVOL).SQLCOMP`  | SQLCOMP compiler program location.                        |
+| `SPOOLCOM` | `$(SYSVOL).SPOOLCOM` | SPOOLCOM program location.                                |
+| `VPROC`    | `$(SYSVOL).VPROC`     | VPROC utility program location.                           |
+| `NSGITVOL` | `$SYSTEM.NSGIT`       | Default NSGit installation subvolume                     |
+| `GMAKEDEP` | `$(NSGITVOL).GMAKEDEP` | GMAKEDEP dependency generator program location.         |
+| `NSGIT`    | `$(NSGITVOL).NSGIT`   | NSGit program location.                                  |
 
 More variables will be defined in future releases.
 
