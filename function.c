@@ -14,6 +14,13 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifdef __TANDEM
+#include <cextdecs.h>
+#define _XOPEN_SOURCE_EXTENDED 1
+#include <string.h>
+#include <unistd.h>
+#endif
+
 #include "makeint.h"
 #include "filedef.h"
 #include "variable.h"
@@ -21,13 +28,6 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "job.h"
 #include "commands.h"
 #include "debug.h"
-
-#ifdef __TANDEM
-#include <cextdecs.h>
-#define _XOPEN_SOURCE_EXTENDED 1
-#include <string.h>
-#include <unistd.h>
-#endif
 
 #ifdef _AMIGA
 #include "amiga.h"
@@ -2259,11 +2259,373 @@ func_abspath (char *o, char **argv, const char *funcname UNUSED)
 }
 
 #ifdef __TANDEM
-static void _strlwr(char *s) {
+void _strupr(char *s) {
+  for (; *s; s++) {
+    *s = toupper(*s);
+  }
+}
+void _strlwr(char *s) {
   for (; *s; s++) {
     *s = tolower(*s);
   }
 }
+static void
+do_additional_define_fields(char *field, char defaultNames[24]) {
+  char className[24];
+  char *value = field;
+  char *next;
+  short error;
+
+  while (field && *field) {
+	next = strchr(field, ',');
+	if (next) {
+	  *next++ = '\0';
+	}
+	value = strchr(field, '=');
+	if (!value)
+	  OS (fatal, *expanding_var, _("Missing define argument for %s"), field);
+	*value++ = '\0';
+	if (strlen(field) > sizeof(className))
+	  OS (fatal, *expanding_var, _("Define argument %s is too long"), field);
+
+	_strupr(field);
+
+	memset(className, ' ', sizeof(className));
+	memcpy(className, field, strlen(field));
+
+	error = DEFINESETATTR(className, value, (short) strlen(value), //
+		(short *)defaultNames);
+	if (error)
+	  ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+		  field);
+
+	field = next;
+  }
+}
+
+/*
+ * Process search define fields. This varies significantly from standard
+ * additional fields.
+ */
+static void
+do_search_define_fields(char *argument, char defaultNames[24]) {
+  char className[24];
+  char *value = argument;
+  char *next;
+  short error;
+  short subvolNumber = 0;
+  short relsubvolNumber = 0;
+  char fieldBuffer[2048];
+
+  while (argument && *argument) {
+	next = strchr(argument, ',');
+	if (next) {
+	  *next++ = '\0';
+	}
+	value = strchr(argument, '=');
+	if (!value)
+	  OS (fatal, *expanding_var, _("Missing define argument for %s"), argument);
+	*value++ = '\0';
+
+	_strupr(argument);
+
+	if (strcmp(argument, "SUBVOL") == 0) {
+      sprintf(fieldBuffer, "%s%d", argument, subvolNumber++);
+	} else if (strcmp(argument, "RELSUBVOL") == 0) {
+      sprintf(fieldBuffer, "%s%d", argument, relsubvolNumber++);
+	} else
+      OS (fatal, *expanding_var, _("Argument %s must be 'subvol' or 'relsubvol'"), argument);
+
+	memset(className, ' ', sizeof(className));
+	memcpy(className, fieldBuffer, strlen(fieldBuffer));
+
+	error = DEFINESETATTR(className, value, (short) strlen(value), //
+		(short *)defaultNames);
+	if (error)
+	  ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        argument);
+
+	argument = next;
+  }
+}
+
+/*
+ * Add a MAP DEFINE to the process context.
+ */
+static char *
+define_add_map (char *o, const char *define, char *defineName, const char *file)
+{
+  char className[24];
+  char valueName[24];
+  char defaultNames[24];
+  char someFileName[64];
+  short error;
+
+  if (ISDB(DB_BASIC))
+	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "MAP", file);
+
+  strcpy(someFileName, getenv("DEFAULTS"));
+  strcat(someFileName, ".A");
+  FILENAME_TO_OLDFILENAME_(someFileName, (short) strlen(someFileName),
+      (short *)defaultNames);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "CLASS", sizeof("CLASS")-1);
+  strcpy(valueName, "MAP");
+  error = DEFINESETATTR(className, valueName, (short) strlen(valueName), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        valueName);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "FILE", sizeof("FILE")-1);
+  error = DEFINESETATTR(className, file, (short) strlen(file), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        file);
+
+  error = DEFINEADD(defineName);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINEADD error %d on %s"), error,
+        define);
+
+  if (ISDB(DB_BASIC))
+	printf("Added MAP DEFINE %s (%s)\n", define, file);
+
+  return o;
+}
+
+/*
+ * Add a CATALOG DEFINE to the process context.
+ */
+static char *
+define_add_catalog (char *o, const char *define, char *defineName, const char *subvol)
+{
+  /* Expand the argument.  */
+  char className[24];
+  char valueName[24];
+  char defaultNames[24];
+  char someFileName[64];
+  short error;
+
+  if (ISDB(DB_BASIC))
+	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "CATALOG", subvol);
+
+  strcpy(someFileName, getenv("DEFAULTS"));
+  strcat(someFileName, ".A");
+  FILENAME_TO_OLDFILENAME_(someFileName, (short) strlen(someFileName),
+      (short *)defaultNames);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "CLASS", sizeof("CLASS")-1);
+  strcpy(valueName, "CATALOG");
+  error = DEFINESETATTR(className, valueName, (short) strlen(valueName), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        valueName);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "SUBVOL", sizeof("SUBVOL")-1);
+  error = DEFINESETATTR(className, subvol, (short) strlen(subvol), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        subvol);
+
+  error = DEFINEADD(defineName);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINEADD error %d on %s"), error,
+        define);
+
+  if (ISDB(DB_BASIC))
+	printf("Added CATALOG DEFINE %s (%s)\n", define, subvol);
+
+  return o;
+}
+
+/*
+ * Add a SPOOL DEFINE to the process context.
+ */
+static char *
+define_add_spool (char *o, const char *define, char *defineName, const char *spooler)
+{
+  /* Expand the argument.  */
+  char className[24];
+  char valueName[24];
+  char defaultNames[24];
+  char someFileName[64];
+  short error;
+  char *arguments = strdup(spooler);
+  char *s;
+
+  if (ISDB(DB_BASIC))
+	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SPOOL", spooler);
+
+  strcpy(someFileName, getenv("DEFAULTS"));
+  strcat(someFileName, ".A");
+  FILENAME_TO_OLDFILENAME_(someFileName, (short) strlen(someFileName),
+      (short *)defaultNames);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "CLASS", sizeof("CLASS")-1);
+  strcpy(valueName, "SPOOL");
+  error = DEFINESETATTR(className, valueName, (short) strlen(valueName), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        valueName);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "LOC", sizeof("LOC")-1);
+
+  s = strchr(arguments, ',');
+  if (s) {
+    *s++ = '\0';
+  }
+  /*
+   * t either points to the next argument or nothing. arguments is the spooler
+   * location.
+   */
+  error = DEFINESETATTR(className, arguments, (short) strlen(arguments), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        spooler);
+
+  if (s) {
+    do_additional_define_fields(s, defaultNames);
+  }
+
+  error = DEFINEADD(defineName);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINEADD error %d on %s"), error,
+        define);
+
+  if (ISDB(DB_BASIC))
+	printf("Added SPOOL DEFINE %s (%s)\n", define, spooler);
+
+  free(arguments);
+  return o;
+}
+
+/*
+ * Add a SEARCH DEFINE to the process context.
+ */
+static char *
+define_add_search (char *o, const char *define, char *defineName, const char *subvol)
+{
+  /* Expand the argument.  */
+  char className[24];
+  char valueName[24];
+  char defaultNames[24];
+  char someFileName[64];
+  short error;
+  char *arguments = strdup(subvol);
+
+  if (ISDB(DB_BASIC))
+	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SEARCH", subvol);
+
+  strcpy(someFileName, getenv("DEFAULTS"));
+  strcat(someFileName, ".A");
+  FILENAME_TO_OLDFILENAME_(someFileName, (short) strlen(someFileName),
+      (short *)defaultNames);
+  memset(className, ' ', sizeof(className));
+  memcpy(className, "CLASS", sizeof("CLASS")-1);
+  strcpy(valueName, "SEARCH");
+  error = DEFINESETATTR(className, valueName, (short) strlen(valueName), //
+      (short *)defaultNames);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+        valueName);
+
+  do_search_define_fields(arguments, defaultNames);
+
+  error = DEFINEADD(defineName);
+  if (error)
+    ONS (fatal, *expanding_var, _("DEFINEADD error %d on %s"), error,
+        define);
+
+  if (ISDB(DB_BASIC))
+	printf("Added SEARCH DEFINE %s (%s)\n", define, subvol);
+
+  free(arguments);
+  return o;
+}
+
+/*
+  Add a DEFINE to the process context.
+*/
+static char *
+func_define_add (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  const char *define = argv[0];
+  const char *class = argv[1];
+  const char *file = argv[2];
+  char defineName[24];
+
+  if (strlen(define) > sizeof(defineName))
+    OS (fatal, *expanding_var, _("define: name %s too long"), define);
+  if (strlen(define) < 2)
+    OS (fatal, *expanding_var, _("define: name %s too short"), define);
+  if (define[0] != '=')
+    OS (fatal, *expanding_var, _("define: name %s must start with an '='"), define);
+  memset(defineName, ' ', sizeof(defineName));
+  memcpy(defineName, define, strlen(define));
+
+  if (strcmp(class, "map") == 0) {
+    return define_add_map (o, define, defineName, file);
+  } else if (strcmp(class, "catalog") == 0) {
+    return define_add_catalog (o, define, defineName, file);
+  } else if (strcmp(class, "spool") == 0) {
+    return define_add_spool (o, define, defineName, file);
+  } else if (strcmp(class, "search") == 0) {
+    return define_add_search (o, define, defineName, file);
+  } else
+    O (fatal, *expanding_var, _("define: must be 'map', 'catalog', 'spool', or 'search'"));
+
+  return o;
+}
+
+/*
+  Remove a DEFINE from the process context.
+*/
+static char *
+func_define_delete (char *o, char **argv, const char *funcname)
+{
+  /* Expand the argument.  */
+  const char *define = argv[0];
+  char defineName[24];
+  short error;
+
+  if (strlen(define) > sizeof(defineName))
+    OS (fatal, *expanding_var, _("define: name %s too long"), define);
+  if (strlen(define) < 2)
+    OS (fatal, *expanding_var, _("define: name %s too short"), define);
+  if (define[0] != '=' && strcmp(define, "**") != 0)
+    OS (fatal, *expanding_var, _("define: name %s must start with an '=' or be '**'"), define);
+  memset(defineName, ' ', sizeof(defineName));
+  memcpy(defineName, define, strlen(define));
+
+  if (ISDB(DB_BASIC))
+	printf("Deleting DEFINE %s\n", define);
+
+  if (strcmp(define, "**") != 0) {
+    error = DEFINEDELETE(defineName);
+    if (error && error != 2051)
+      ONS (fatal, *expanding_var, _("DEFINEDELETE error %d on %s"), error,
+          define);
+    if (ISDB(DB_BASIC))
+  	  printf("Deleted DEFINE %s\n", define);
+  } else {
+	error = DEFINEDELETEALL();
+    if (error && error != 2051)
+      ONS (fatal, *expanding_var, _("DEFINEDELETEALL error %d on %s"), error,
+          define);
+    if (ISDB(DB_BASIC))
+  	  printf("Deleted all DEFINES %s\n", define);
+  }
+
+  return o;
+}
+
 /*
   Sleep builtin (available on NonStop because there is no one in TACL that is easy to use).
 */
@@ -2375,6 +2737,7 @@ func_pname (char *o, char **argv, const char *funcname)
   o = variable_buffer_output (o, ossName, strlen (ossName));
   return o;
 }
+
 /*
   Add a PARAM to the process context.
 */
@@ -2518,6 +2881,10 @@ static struct function_table_entry function_table_init[] =
   FT_ENTRY ("not",           0,  1,  1,  func_not),
 #endif
 #ifdef __TANDEM
+  FT_ENTRY ("define_add",    3,  3,  1,  func_define_add),
+  FT_ENTRY ("add_define",    3,  3,  1,  func_define_add),
+  FT_ENTRY ("define_delete", 1,  1,  1,  func_define_delete),
+  FT_ENTRY ("delete_define", 1,  1,  1,  func_define_delete),
   FT_ENTRY ("delay",         1,  2,  1,  func_delay),
   FT_ENTRY ("pname",         1,  1,  1,  func_pname),
   FT_ENTRY ("param",         1,  1,  1,  func_param_add),

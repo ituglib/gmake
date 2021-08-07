@@ -107,9 +107,7 @@ extern int errno;
 #endif
 
 #ifdef  HAVE_UNISTD_H
-#ifndef __TANDEM
 # include <unistd.h>
-#endif
 /* Ultrix's unistd.h always defines _POSIX_VERSION, but you only get
    POSIX.1 behavior with 'cc -YPOSIX', which predefines POSIX itself!  */
 # if defined (_POSIX_VERSION) && !defined (ultrix) && !defined (VMS)
@@ -615,6 +613,9 @@ extern int print_version_flag, print_directory_flag, check_symlink_flag;
 extern int warn_undefined_variables_flag, trace_flag, posix_pedantic;
 extern int not_parallel, second_expansion, clock_skew_detected;
 extern int rebuilding_makefiles, one_shell, output_sync, verify_flag;
+#if defined _GUARDIAN_TARGET
+extern int legacy_cc;
+#endif
 
 /* can we run commands via 'sh -c xxx' or must we use batch files? */
 extern int batch_mode_shell;

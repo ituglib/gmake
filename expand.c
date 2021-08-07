@@ -24,6 +24,10 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "variable.h"
 #include "rule.h"
 
+#ifdef _GUARDIAN_TARGET
+#include "tandem.h"
+#endif
+
 /* Initially, any errors reported when expanding strings will be reported
    against the file where the error appears.  */
 const gmk_floc **expanding_var = &reading_file;
@@ -234,8 +238,10 @@ variable_expand_string (char *line, const char *string, long length)
       switch (*p)
         {
         case '$':
-          /* $$ seen means output one $ to the variable output buffer.  */
-          o = variable_buffer_output (o, p, 1);
+        case '\0':
+          /* $$ or $ at the end of the string means output one $ to the
+             variable output buffer.  */
+          o = variable_buffer_output (o, p1, 1);
           break;
 
         case '(':
@@ -380,7 +386,8 @@ variable_expand_string (char *line, const char *string, long length)
           }
           break;
 
-        case '\0':
+        case '=':
+          o = reference_define (o, (char **)&p);
           break;
 
         default:
@@ -391,8 +398,8 @@ variable_expand_string (char *line, const char *string, long length)
              $a is equivalent to $(a).  */
 #ifdef _GUARDIAN_TARGET
           if (isalpha(*p)) {
-              *o++ = '$';
-              *o++ = *p;
+        	  *o++ = '$';
+        	  *o++ = *p;
         	  break; // Do not substitute single character variables.
           }
 #endif

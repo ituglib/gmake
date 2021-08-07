@@ -308,6 +308,9 @@
 /* Define to 1 if you have the 'union wait' type in <sys/wait.h>. */
 /* #undef HAVE_UNION_WAIT */
 
+/* Define to 1 if you have umask */
+#define HAVE_UMASK 1
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
@@ -372,10 +375,14 @@
 #define VERSION "4.1g5"
 
 /* Build host information. */
-#ifdef _TNS_E_TARGET
-#define MAKE_HOST "nse-tandem-nsk"
+#if defined (_TNS_E_TARGET)
+# define MAKE_HOST "nse-tandem-nsk"
+#elif defined (_TNS_X_TARGET)
+# define MAKE_HOST "nsx-tandem-nsk"
+#elif defined (_TNS_V_TARGET)
+# define MAKE_HOST "nsv-tandem-nsk"
 #else
-#define MAKE_HOST "nsx-tandem-nsk"
+# define MAKE_HOST "unknown-tandem-nsk"
 #endif
 
 /* Define to 1 to enable job server support in GNU make. */

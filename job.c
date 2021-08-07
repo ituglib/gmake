@@ -17,6 +17,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "makeint.h"
 
 #include <assert.h>
+#include <string.h>
 
 #ifdef __TANDEM
 #include <unistd.h>
@@ -123,7 +124,6 @@ static void vmsWaitForChildren (int *);
 #endif
 
 #ifdef _GUARDIAN_TARGET
-#define PROCDEATH_WARNING 1 /* Proc Calls App. C Completion Codes: file? */
 #include "tandem.h"
 static int tandem_pid = 123;
 static int tandem_status;
@@ -1667,7 +1667,7 @@ start_job_command (struct child *child)
   }
 #endif  /* Amiga */
 #ifdef _GUARDIAN_TARGET
-  tandem_status = launch_proc (argv, environ);
+  tandem_status = launch_proc (argv, environ, NULL, 0, 0);
   ++dead_children;
   child->pid = tandem_pid++;
 #endif  /* Tandem */

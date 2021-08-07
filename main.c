@@ -708,6 +708,14 @@ expand_command_line_file (const char *name)
       name = "./";
     }
 
+#ifdef _GUARDIAN_TARGET
+  if (name[0] == '$' && name[1] == '=')
+    {
+      expanded = resolve_define(name+1);
+      name = expanded;
+    }
+#endif
+
   cp = strcache_add (name);
 
   free (expanded);

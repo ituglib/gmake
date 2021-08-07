@@ -335,9 +335,9 @@ ar_scan (const char *archive, ar_member_func_t function, const void *varg)
 #ifndef WINDOWS32
 # if !defined (__ANDROID__) && !defined (__BEOS__)
 #  ifdef __TANDEM
-#   ifdef _TNS_E_TARGET
+#   if defined(_TNS_E_TARGET)
 #    include <ar.nse.h>
-#   else
+#   elif defined(_TNS_X_TARGET)
 #    include <ar.nsx.h>
 #   endif
 #  else

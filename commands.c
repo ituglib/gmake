@@ -39,7 +39,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 int remote_kill (int id, int sig);
 
 #ifndef HAVE_UNISTD_H
-int getpid ();
+pid_t getpid ();
 #endif
 
 
@@ -514,7 +514,7 @@ fatal_error_signal (int sig)
 #ifdef WINDOWS32
   extern HANDLE main_thread;
 
-  /* Windows creates a sperate thread for handling Ctrl+C, so we need
+  /* Windows creates a separate thread for handling Ctrl+C, so we need
      to suspend the main thread, or else we will have race conditions
      when both threads call reap_children.  */
   if (main_thread)
@@ -545,10 +545,11 @@ fatal_error_signal (int sig)
     {
       struct child *c;
       for (c = children; c != 0; c = c->next)
-        if (!c->remote) {
+        {
 #ifdef _GUARDIAN_TARGET
-        	// FIXME: Implement PROCESS_STOP_ using CPU/PIN in c->pid
+       	// FIXME: Implement PROCESS_STOP_ using CPU/PIN in c->pid
 #else
+        if (!c->remote && c->pid > 0)
             (void) kill (c->pid, SIGTERM);
 #endif
         }
@@ -571,7 +572,7 @@ fatal_error_signal (int sig)
       /* Remote children won't automatically get signals sent
          to the process group, so we must send them.  */
       for (c = children; c != 0; c = c->next)
-        if (c->remote)
+        if (c->remote && c->pid > 0)
           (void) remote_kill (c->pid, sig);
 
       for (c = children; c != 0; c = c->next)
@@ -676,7 +677,7 @@ delete_child_targets (struct child *child)
 {
   struct dep *d;
 
-  if (child->deleted)
+  if (child->deleted || child->pid < 0)
     return;
 
   /* Delete the target file if it changed.  */

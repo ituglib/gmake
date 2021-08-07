@@ -66,16 +66,19 @@ a variable. Instead, all tokens represented by a `$` followed by letters are
 considered to be disk volumes in the GUARDIAN space. The `$V` form should not
 be used. The `$(VARIABLE)` form should be used for all variable references.
 
-<!-- ### Special Variables -->
-<!--  -->
-<!-- GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be -->
-<!-- referenced using the form: -->
-<!--  -->
-<!--     $=DEFINE -->
-<!--  -->
-<!-- In this case, the variable will be substituted with the value of the `FILE` -->
-<!-- attribute of the MAP DEFINE. -->
-<!--  -->
+### Special Variables
+
+GUARDIAN MAP DEFINE values, if they are in the GMaken process context, can be
+referenced using the form:
+
+    $=DEFINE
+
+In this case, the variable will be substituted with the value of the `FILE`
+attribute of the MAP DEFINE.
+
+This variable form can also be specified on the `GMAKE` command line when
+referencing targets.
+
 ### Predefined Rules
 
 Many of the predefined rules in GNU Make have no effect in GMake because files
@@ -164,9 +167,79 @@ More variables will be defined in future releases.
 
 ### Predefined Functions
 
-Some substitution functions are not supported by GMake, including:
+Some substitution functions are not supported by GMake or GMaken. Please check
+individual functions before committing to their use.
 
-    $(shell command)
+#### `$(add_define define-attributes)` (GMaken Only)
+
+The `add_define` function adds a GUARDIAN define into the process context of
+the GMaken process. The added DEFINE is usable as a DEFINE variable in rules and
+recipes. It is also passed to any process started by the GMaken process. DEFINE
+names always must begin with an `=` followed by a combination of 1 to 24
+letters, numbers, carets or underscore. The `add_define` function can create
+many different DEFINE classes:
+
+`$(add_define =define,map,file)` function creates a MAP DEFINE.
+
+`$(add_define =define,catalog,sub-volume)` function creates a CATALOG
+DEFINE.
+
+`$(add_define =define,spool,location[,attribute=value]...)` function
+creates a SPOOL DEFINE with a location. Any SPOOL define attribute can be
+specified to this function.
+
+`$(add_define =define,search,(subvol|relsubvol)=value...)` function
+creates a SEARCH DEFINE. The `subvol` and `relsubvol` attributes are
+automatically numbered and can appear multiple times.
+
+The `$(define_add)` function is an alias to `$(add_define)` for historical
+reasons.
+
+#### `$(delete_define define|**)` (GMaken Only)
+
+The `delete_define` function removes one or all GUARDIAN DEFINES in the PFS
+of the GMaken process.
+
+`$(delete_define =define)` removes a specific DEFINE. No error is reported
+if the specified DEFINE does not exist.
+
+`$(delete_define **)` removes all DEFINEs. No error is reported if there
+are no current DEFINEs.
+
+The `$(define_delete)` is an alias to `$(delete_define)` for historical
+reasons.
+
+#### `$(assign name,file)`
+
+The `assign` function adds a GUARDIAN `ASSIGN` to the process context. The
+initial set of `ASSIGN` values are loaded when GMAKEN starts. This function can
+modify or add an `ASSIGN`.
+
+Note that functions are evaluated as a set before programs are run, so clearing
+and setting `ASSIGNs` should be specified before running programs in a recipe.
+See also `$(clear_assign)` below.
+
+**Example:**
+
+    object: source
+            $(param SWAPVOL $SWAP)
+            $(TAL) /in $</ $@
+
+#### `$(clear_assign name)`
+
+The `clear_assign` function removes one or all GUARDIAN `ASSIGNs` from the
+process context. If `name` is `*`, all `ASSIGNs` are removed. If the specified
+`ASSIGN` does not exist, no error is reported.
+
+Note that functions are evaluated as a set before programs are run, so clearing
+and setting `ASSIGNs` should be specified before running programs in a recipe.
+
+**Example:**
+
+    object: source
+            $(clear_assign *)
+            $(assign SSV0 $SYSTEM.SYSTEM)
+            $(TAL) /in $</ $@
 
 __Note__: The `$(shell command)` function is planned for the 4.3 release of
 GMake.
@@ -179,6 +252,38 @@ The `$(delay time units)` function causes the current recipe to delay for
 some period of time. This is similar to calling sleep in OSS. _time_ must be a
 positive integer. _units_ can be one of: **microseconds** (the default);
 **milliseconds**; **seconds**; **minutes**; or **hours**.
+
+#### `$(param name value)`
+
+The `param` function adds a GUARDIAN `PARAM` to the process context. The
+initial set of `PARAM` values are loaded when GMAKEN starts. This function can
+modify or add a `PARAM`.
+
+Note that functions are evaluated as a set before programs are run, so clearing
+and setting `PARAMs` should be specified before running programs in a recipe.
+See also `$(clear_param)` below.
+
+**Example:**
+
+    object: source
+            $(param SWAPVOL $SWAP)
+            $(TAL) /in $</ $@
+
+#### `$(clear_param name)`
+
+The `clear_param` function removes one or all GUARDIAN `PARAMs` from the
+process context. If `name` is `*`, all `PARAMs` are removed. If the specified
+param does not exist, no error is reported.
+
+Note that functions are evaluated as a set before programs are run, so clearing
+and setting `PARAMs` should be specified before running programs in a recipe.
+
+**Example:**
+
+    object: source
+            $(clear_param *)
+            $(param SWAPVOL $SWAP)
+            $(TAL) /in $</ $@
 
 #### `$(pname file)` ####
 
