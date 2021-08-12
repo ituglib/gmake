@@ -36,7 +36,6 @@ const char *make_host = MAKE_HOST;
 #define VERSION_STRING "T0593H01 - (30SEP2020)" __DATE__ __TIME__
 
 #pragma section VERSION_GMAKE
-/* The VPROC variable needs to be defined on the command line. */
 void VPROC (void)
 {}
 

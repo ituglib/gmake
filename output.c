@@ -1,5 +1,5 @@
 /* Output to stdout / stderr for GNU make
-Copyright (C) 2013-2014 Free Software Foundation, Inc.
+Copyright (C) 2013-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -18,7 +18,8 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #endif
 
 #include "makeint.h"
-#include "job.h"
+#include "os.h"
+#include "output.h"
 
 /* GNU make no longer supports pre-ANSI89 environments.  */
 
@@ -53,7 +54,7 @@ unsigned int stdio_traced = 0;
 
 #define OUTPUT_ISSET(_out) ((_out)->out >= 0 || (_out)->err >= 0)
 
-#ifdef HAVE_FCNTL
+#ifdef HAVE_FCNTL_H
 # define STREAM_OK(_s) ((fcntl (fileno (_s), F_GETFD) != -1) || (errno != EBADF))
 #else
 # define STREAM_OK(_s) 1
@@ -72,18 +73,10 @@ _outputs (struct output *out, int is_err, const char *msg)
   else
     {
       int fd = is_err ? out->err : out->out;
-      int len = strlen (msg);
+      size_t len = strlen (msg);
       int r;
-
       EINTRLOOP (r, lseek (fd, 0, SEEK_END));
-      while (1)
-        {
-          EINTRLOOP (r, write (fd, msg, len));
-          if (r == len || r <= 0)
-            break;
-          len -= r;
-          msg += r;
-        }
+      writebuf (fd, msg, len);
     }
 }
 
@@ -94,8 +87,8 @@ static int
 log_working_directory (int entering)
 {
   static char *buf = NULL;
-  static unsigned int len = 0;
-  unsigned int need;
+  static size_t len = 0;
+  size_t need;
   const char *fmt;
   char *p;
 
@@ -158,16 +151,23 @@ log_working_directory (int entering)
   return 1;
 }
 
-/* Set a file descriptor to be in O_APPEND mode.
-   If it fails, just ignore it.  */
+/* Set a file descriptor referring to a regular file
+   to be in O_APPEND mode.  If it fails, just ignore it.  */
 
 static void
 set_append_mode (int fd)
 {
 #if defined(F_GETFL) && defined(F_SETFL) && defined(O_APPEND)
-  int flags = fcntl (fd, F_GETFL, 0);
+  struct stat stbuf;
+  int flags;
+  if (fstat (fd, &stbuf) != 0 || !S_ISREG (stbuf.st_mode))
+    return;
+  flags = fcntl (fd, F_GETFL, 0);
   if (flags >= 0)
-    fcntl (fd, F_SETFL, flags | O_APPEND);
+    {
+      int r;
+      EINTRLOOP(r, fcntl (fd, F_SETFL, flags | O_APPEND));
+    }
 #endif
 }
 
@@ -181,7 +181,7 @@ static sync_handle_t sync_handle = -1;
 
 /* Set up the sync handle.  Disables output_sync on error.  */
 static int
-sync_init ()
+sync_init (void)
 {
   int combined_output = 0;
 
@@ -290,8 +290,9 @@ release_semaphore (void *sem)
 /* Returns a file descriptor to a temporary file.  The file is automatically
    closed/deleted on exit.  Don't use a FILE* stream.  */
 int
-output_tmpfd ()
+output_tmpfd (void)
 {
+  mode_t mask = umask (0077);
   int fd = -1;
   FILE *tfile = tmpfile ();
 
@@ -306,6 +307,8 @@ output_tmpfd ()
   fclose (tfile);
 
   set_append_mode (fd);
+
+  umask (mask);
 
   return fd;
 }
@@ -328,7 +331,9 @@ setup_tmpfile (struct output *out)
       int fd = output_tmpfd ();
       if (fd < 0)
         goto error;
-      CLOSE_ON_EXEC (fd);
+#if ! defined(_GUARDIAN_TARGET)
+      fd_noinherit (fd);
+#endif
       out->out = fd;
     }
 
@@ -341,7 +346,9 @@ setup_tmpfile (struct output *out)
           int fd = output_tmpfd ();
           if (fd < 0)
             goto error;
-          CLOSE_ON_EXEC (fd);
+#if ! defined(_GUARDIAN_TARGET)
+          fd_noinherit (fd);
+#endif
           out->err = fd;
         }
     }
@@ -351,7 +358,7 @@ setup_tmpfile (struct output *out)
   /* If we failed to create a temp file, disable output sync going forward.  */
  error:
   output_close (out);
-  output_sync = 0;
+  output_sync = OUTPUT_SYNC_NONE;
 }
 
 /* Synchronize the output of jobs in -j mode to keep the results of
@@ -375,7 +382,7 @@ output_dump (struct output *out)
       void *sem = acquire_semaphore ();
 
       /* Log the working directory for this dump.  */
-      if (print_directory_flag && output_sync != OUTPUT_SYNC_RECURSE)
+      if (print_directory && output_sync != OUTPUT_SYNC_RECURSE)
         traced = log_working_directory (1);
 
       if (outfd_not_empty)
@@ -406,58 +413,6 @@ output_dump (struct output *out)
     }
 }
 #endif /* NO_OUTPUT_SYNC */
-
-
-/* Provide support for temporary files.  */
-
-#ifndef HAVE_STDLIB_H
-# ifdef HAVE_MKSTEMP
-int mkstemp (char *template);
-# else
-char *mktemp (char *template);
-# endif
-#endif
-
-FILE *
-output_tmpfile (char **name, const char *template)
-{
-#ifdef HAVE_FDOPEN
-  int fd;
-#endif
-
-#if defined HAVE_MKSTEMP || defined HAVE_MKTEMP
-# define TEMPLATE_LEN   strlen (template)
-#else
-# define TEMPLATE_LEN   L_tmpnam
-#endif
-  *name = xmalloc (TEMPLATE_LEN + 1);
-  strcpy (*name, template);
-
-#if defined HAVE_MKSTEMP && defined HAVE_FDOPEN
-  /* It's safest to use mkstemp(), if we can.  */
-  fd = mkstemp (*name);
-  if (fd == -1)
-    return 0;
-  return fdopen (fd, "w");
-#else
-# ifdef HAVE_MKTEMP
-  (void) mktemp (*name);
-# else
-  (void) tmpnam (*name);
-# endif
-
-# ifdef HAVE_FDOPEN
-  /* Can't use mkstemp(), but guard against a race condition.  */
-  fd = open (*name, O_CREAT|O_EXCL|O_WRONLY, 0600);
-  if (fd == -1)
-    return 0;
-  return fdopen (fd, "w");
-# else
-  /* Not secure, but what can we do?  */
-  return fopen (*name, "w");
-# endif
-#endif
-}
 
 
 /* This code is stolen from gnulib.
@@ -565,7 +520,7 @@ output_close (struct output *out)
 
 /* We're about to generate output: be sure it's set up.  */
 void
-output_start ()
+output_start (void)
 {
 #ifndef NO_OUTPUT_SYNC
   /* If we're syncing output make sure the temporary file is set up.  */
@@ -577,7 +532,7 @@ output_start ()
   /* If we're not syncing this output per-line or per-target, make sure we emit
      the "Entering..." message where appropriate.  */
   if (output_sync == OUTPUT_SYNC_NONE || output_sync == OUTPUT_SYNC_RECURSE)
-    if (! stdio_traced && print_directory_flag)
+    if (! stdio_traced && print_directory)
       stdio_traced = log_working_directory (1);
 }
 
@@ -647,7 +602,7 @@ message (int prefix, size_t len, const char *fmt, ...)
 /* Print an error message.  */
 
 void
-error (const gmk_floc *flocp, size_t len, const char *fmt, ...)
+error (const floc *flocp, size_t len, const char *fmt, ...)
 {
   va_list args;
   char *p;
@@ -658,7 +613,7 @@ error (const gmk_floc *flocp, size_t len, const char *fmt, ...)
   p = get_buffer (len);
 
   if (flocp && flocp->filenm)
-    sprintf (p, "%s:%lu: ", flocp->filenm, flocp->lineno);
+    sprintf (p, "%s:%lu: ", flocp->filenm, flocp->lineno + flocp->offset);
   else if (makelevel == 0)
     sprintf (p, "%s: ", program);
   else
@@ -678,7 +633,7 @@ error (const gmk_floc *flocp, size_t len, const char *fmt, ...)
 /* Print an error message and exit.  */
 
 void
-fatal (const gmk_floc *flocp, size_t len, const char *fmt, ...)
+fatal (const floc *flocp, size_t len, const char *fmt, ...)
 {
   va_list args;
   const char *stop = _(".  Stop.\n");
@@ -690,7 +645,7 @@ fatal (const gmk_floc *flocp, size_t len, const char *fmt, ...)
   p = get_buffer (len);
 
   if (flocp && flocp->filenm)
-    sprintf (p, "%s:%lu: *** ", flocp->filenm, flocp->lineno);
+    sprintf (p, "%s:%lu: *** ", flocp->filenm, flocp->lineno + flocp->offset);
   else if (makelevel == 0)
     sprintf (p, "%s: *** ", program);
   else
@@ -727,4 +682,16 @@ pfatal_with_name (const char *name)
   OSS (fatal, NILF, _("%s: %s"), name, err);
 
   /* NOTREACHED */
+}
+
+/* Print a message about out of memory (not using more heap) and exit.
+   Our goal here is to be sure we don't try to allocate more memory, which
+   means we don't want to use string translations or normal cleanup.  */
+
+void
+out_of_memory ()
+{
+  writebuf (FD_STDOUT, program, strlen (program));
+  writebuf (FD_STDOUT, STRING_SIZE_TUPLE (": *** virtual memory exhausted\n"));
+  exit (MAKE_FAILURE);
 }

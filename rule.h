@@ -1,5 +1,5 @@
 /* Definitions for using pattern rules in GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -43,15 +43,15 @@ extern unsigned int num_pattern_rules;
 
 extern unsigned int max_pattern_deps;
 extern unsigned int max_pattern_targets;
-extern unsigned int max_pattern_dep_length;
+extern size_t max_pattern_dep_length;
 
 extern struct file *suffix_file;
-extern unsigned int maxsuffix;
 
 
-void count_implicit_rule_limits (void);
+void snap_implicit_rules (void);
 void convert_to_pattern (void);
 void install_pattern_rule (struct pspec *p, int terminal);
 void create_pattern_rule (const char **targets, const char **target_percents,
-                          unsigned int num, int terminal, struct dep *deps,
+                          unsigned short num, int terminal, struct dep *deps,
                           struct commands *commands, int override);
+void print_rule_data_base (void);

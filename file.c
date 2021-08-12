@@ -1,5 +1,5 @@
 /* Target file management for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -17,11 +17,6 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "makeint.h"
 
 #include <assert.h>
-#include <time.h>
-#ifdef __TANDEM
-#include <stdlib.h>
-#include <unistd.h>
-#endif
 
 #include "filedef.h"
 #include "dep.h"
@@ -62,9 +57,6 @@ file_hash_cmp (const void *x, const void *y)
                           ((struct file const *) y)->hname);
 }
 
-#ifndef FILE_BUCKETS
-#define FILE_BUCKETS    1007
-#endif
 static struct hash_table files;
 
 /* Whether or not .SECONDARY with no prerequisites was given.  */
@@ -80,8 +72,11 @@ lookup_file (const char *name)
 {
   struct file *f;
   struct file file_key;
-#if defined(VMS) && !defined(WANT_CASE_SENSITIVE_TARGETS)
+#ifdef VMS
+  int want_vmsify;
+#ifndef WANT_CASE_SENSITIVE_TARGETS
   char *lname;
+#endif
 #endif
 
   assert (*name != '\0');
@@ -90,6 +85,7 @@ lookup_file (const char *name)
      for names read from makefiles.  It is here for names passed
      on the command line.  */
 #ifdef VMS
+   want_vmsify = (strpbrk (name, "]>:^") != NULL);
 # ifndef WANT_CASE_SENSITIVE_TARGETS
   if (*name != '.')
     {
@@ -104,6 +100,8 @@ lookup_file (const char *name)
 # endif
 
   while (name[0] == '[' && name[1] == ']' && name[2] != '\0')
+      name += 2;
+  while (name[0] == '<' && name[1] == '>' && name[2] != '\0')
       name += 2;
 #endif
   while (name[0] == '.'
@@ -125,15 +123,19 @@ lookup_file (const char *name)
     }
 
   if (*name == '\0')
-    /* It was all slashes after a dot.  */
-#if defined(VMS)
-    name = "[]";
-#elif defined(_AMIGA)
-    name = "";
+    {
+      /* It was all slashes after a dot.  */
+#if defined(_AMIGA)
+      name = "";
 #else
-    name = "./";
+      name = "./";
 #endif
-
+#if defined(VMS)
+      /* TODO - This section is probably not needed. */
+      if (want_vmsify)
+        name = "[]";
+#endif
+    }
   file_key.hname = name;
   f = hash_find_item (&files, &file_key);
 #if defined(VMS) && !defined(WANT_CASE_SENSITIVE_TARGETS)
@@ -408,7 +410,7 @@ remove_intermediates (int sig)
                   {
                     if (! doneany)
                       DB (DB_BASIC, (_("Removing intermediate files...\n")));
-                    if (!silent_flag)
+                    if (!run_silent)
                       {
                         if (! doneany)
                           {
@@ -490,7 +492,7 @@ enter_prereqs (struct dep *deps, const char *stem)
       while (dp != 0)
         {
           char *percent;
-          int nl = strlen (dp->name) + 1;
+          size_t nl = strlen (dp->name) + 1;
           char *nm = alloca (nl);
           memcpy (nm, dp->name, nl);
           percent = find_percent (nm);
@@ -546,15 +548,6 @@ enter_prereqs (struct dep *deps, const char *stem)
     }
 
   return deps;
-}
-
-/* Set the intermediate flag.  */
-
-static void
-set_intermediate (const void *item)
-{
-  struct file *f = (struct file *) item;
-  f->intermediate = 1;
 }
 
 /* Expand and parse each dependency line. */
@@ -642,13 +635,70 @@ expand_deps (struct file *f)
     }
 }
 
-/* Reset the updating flag.  */
+/* Add extra prereqs to the file in question.  */
+
+struct dep *
+expand_extra_prereqs (const struct variable *extra)
+{
+  struct dep *d;
+  struct dep *prereqs = extra ? split_prereqs (variable_expand (extra->value)) : NULL;
+
+  for (d = prereqs; d; d = d->next)
+    {
+      d->file = lookup_file (d->name);
+      if (!d->file)
+        d->file = enter_file (d->name);
+      d->name = NULL;
+      d->ignore_automatic_vars = 1;
+    }
+
+  return prereqs;
+}
+
+/* Perform per-file snap operations. */
 
 static void
-reset_updating (const void *item)
+snap_file (const void *item, void *arg)
 {
-  struct file *f = (struct file *) item;
-  f->updating = 0;
+  struct file *f = (struct file*)item;
+  struct dep *prereqs = NULL;
+
+  /* If we're not doing second expansion then reset updating.  */
+  if (!second_expansion)
+    f->updating = 0;
+
+  /* If .SECONDARY is set with no deps, mark all targets as intermediate.  */
+  if (all_secondary)
+    f->intermediate = 1;
+
+  /* If .EXTRA_PREREQS is set, add them as ignored by automatic variables.  */
+  if (f->variables)
+    prereqs = expand_extra_prereqs (lookup_variable_in_set (STRING_SIZE_TUPLE(".EXTRA_PREREQS"), f->variables->set));
+
+  else if (f->is_target)
+    prereqs = copy_dep_chain (arg);
+
+  if (prereqs)
+    {
+      struct dep *d;
+      for (d = prereqs; d; d = d->next)
+        if (streq (f->name, dep_name (d)))
+          /* Skip circular dependencies.  */
+          break;
+
+      if (d)
+        /* We broke early: must have found a circular dependency.  */
+        free_dep_chain (prereqs);
+      else if (!f->deps)
+        f->deps = prereqs;
+      else
+        {
+          d = f->deps;
+          while (d->next)
+            d = d->next;
+          d->next = prereqs;
+        }
+    }
 }
 
 /* For each dependency of each file, make the 'struct dep' point
@@ -698,9 +748,6 @@ snap_deps (void)
             expand_deps (f);
       free (file_slot_0);
     }
-  else
-    /* We're not doing second expansion, so reset updating.  */
-    hash_map (&files, reset_updating);
 
   /* Now manage all the special targets.  */
 
@@ -742,10 +789,7 @@ snap_deps (void)
           f2->intermediate = f2->secondary = 1;
     /* .SECONDARY with no deps listed marks *all* files that way.  */
     else
-      {
-        all_secondary = 1;
-        hash_map (&files, set_intermediate);
-      }
+      all_secondary = 1;
 
   f = lookup_file (".EXPORT_ALL_VARIABLES");
   if (f != 0 && f->is_target)
@@ -766,7 +810,7 @@ snap_deps (void)
   if (f != 0 && f->is_target)
     {
       if (f->deps == 0)
-        silent_flag = 1;
+        run_silent = 1;
       else
         for (d = f->deps; d != 0; d = d->next)
           for (f2 = d->file; f2 != 0; f2 = f2->prev)
@@ -777,6 +821,15 @@ snap_deps (void)
   if (f != 0 && f->is_target)
     not_parallel = 1;
 
+  {
+    struct dep *prereqs = expand_extra_prereqs (lookup_variable (STRING_SIZE_TUPLE(".EXTRA_PREREQS")));
+
+    /* Perform per-file snap operations.  */
+    hash_map_arg(&files, snap_file, prereqs);
+
+    free_dep_chain (prereqs);
+  }
+
 #ifndef NO_MINUS_C_MINUS_O
   /* If .POSIX was defined, remove OUTPUT_OPTION to comply.  */
   /* This needs more work: what if the user sets this in the makefile?
@@ -786,7 +839,9 @@ snap_deps (void)
 #endif
 }
 
-/* Set the 'command_state' member of FILE and all its 'also_make's.  */
+/* Set the 'command_state' member of FILE and all its 'also_make's.
+   Don't decrease the state of also_make's (e.g., don't downgrade a 'running'
+   also_make to a 'deps_running' also_make).  */
 
 void
 set_command_state (struct file *file, enum cmd_state state)
@@ -796,7 +851,8 @@ set_command_state (struct file *file, enum cmd_state state)
   file->command_state = state;
 
   for (d = file->also_make; d != 0; d = d->next)
-    d->file->command_state = state;
+    if (state > d->file->command_state)
+      d->file->command_state = state;
 }
 
 /* Convert an external file timestamp to internal form.  */
@@ -878,7 +934,7 @@ file_timestamp_now (int *resolution)
 void
 file_timestamp_sprintf (char *p, FILE_TIMESTAMP ts)
 {
-  time_t t = FILE_TIMESTAMP_S (ts);
+  time_t t = (time_t) FILE_TIMESTAMP_S (ts);
   struct tm *tm = localtime (&t);
 
   if (tm)
@@ -1098,8 +1154,8 @@ build_target_list (char *value)
 
   if (files.ht_fill != last_targ_count)
     {
-      unsigned long max = EXPANSION_INCREMENT (strlen (value));
-      unsigned long len;
+      size_t max = EXPANSION_INCREMENT (strlen (value));
+      size_t len;
       char *p;
       struct file **fp = (struct file **) files.ht_vec;
       struct file **end = &fp[files.ht_size];
@@ -1113,12 +1169,12 @@ build_target_list (char *value)
         if (!HASH_VACANT (*fp) && (*fp)->is_target)
           {
             struct file *f = *fp;
-            int l = strlen (f->name);
+            size_t l = strlen (f->name);
 
             len += l + 1;
             if (len > max)
               {
-                unsigned long off = p - value;
+                size_t off = p - value;
 
                 max += EXPANSION_INCREMENT (l + 1);
                 value = xrealloc (value, max);

@@ -1,5 +1,5 @@
 /* Miscellaneous generic support functions for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -25,6 +25,11 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 /* GNU make no longer supports pre-ANSI89 environments.  */
 
 #include <stdarg.h>
+
+#ifdef WINDOWS32
+# include <windows.h>
+# include <io.h>
+#endif
 
 #ifdef HAVE_FCNTL_H
 # include <fcntl.h>
@@ -54,80 +59,65 @@ alpha_compare (const void *v1, const void *v2)
 void
 collapse_continuations (char *line)
 {
-  char *in, *out, *p;
+  char *out = line;
+  char *in = line;
+  char *q;
 
-  in = strchr (line, '\n');
-  if (in == 0)
+  q = strchr(in, '\n');
+  if (q == 0)
     return;
 
-  out = in;
-  while (out > line && out[-1] == '\\')
-    --out;
-
-  while (*in != '\0')
+  do
     {
-      /* BS_WRITE gets the number of quoted backslashes at
-         the end just before IN, and BACKSLASH gets nonzero
-         if the next character is quoted.  */
-      unsigned int backslash = 0;
-      unsigned int bs_write = 0;
-      for (p = in - 1; p >= line && *p == '\\'; --p)
+      char *p = q;
+      int i;
+      size_t out_line_length;
+
+      if (q > line && q[-1] == '\\')
         {
-          if (backslash)
-            ++bs_write;
-          backslash = !backslash;
-
-          /* It should be impossible to go back this far without exiting,
-             but if we do, we can't get the right answer.  */
-          if (in == out - 1)
-            abort ();
+          /* Search for more backslashes.  */
+          i = -2;
+          while (&p[i] >= line && p[i] == '\\')
+            --i;
+          ++i;
         }
+      else
+        i = 0;
 
-      /* Output the appropriate number of backslashes.  */
-      while (bs_write-- > 0)
-        *out++ = '\\';
+      /* The number of backslashes is now -I, keep half of them.  */
+      out_line_length = (p - in) + i - i/2;
+      if (out != in)
+        memmove (out, in, out_line_length);
+      out += out_line_length;
 
-      /* Skip the newline.  */
-      ++in;
+      /* When advancing IN, skip the newline too.  */
+      in = q + 1;
 
-      if (backslash)
+      if (i & 1)
         {
           /* Backslash/newline handling:
              In traditional GNU make all trailing whitespace, consecutive
-             backslash/newlines, and any leading whitespace on the next line
-             is reduced to a single space.
+             backslash/newlines, and any leading non-newline whitespace on the
+             next line is reduced to a single space.
              In POSIX, each backslash/newline and is replaced by a space.  */
-          in = next_token (in);
+          while (ISBLANK (*in))
+            ++in;
           if (! posix_pedantic)
-            while (out > line && isblank ((unsigned char)out[-1]))
+            while (out > line && ISBLANK (out[-1]))
               --out;
           *out++ = ' ';
         }
       else
-        /* If the newline isn't quoted, put it in the output.  */
-        *out++ = '\n';
+        {
+          /* If the newline isn't quoted, put it in the output.  */
+          *out++ = '\n';
+        }
 
-      /* Now copy the following line to the output.
-         Stop when we find backslashes followed by a newline.  */
-      while (*in != '\0')
-        if (*in == '\\')
-          {
-            p = in + 1;
-            while (*p == '\\')
-              ++p;
-            if (*p == '\n')
-              {
-                in = p;
-                break;
-              }
-            while (in < p)
-              *out++ = *in++;
-          }
-        else
-          *out++ = *in++;
+      q = strchr(in, '\n');
     }
+  while (q);
 
-  *out = '\0';
+  memmove(out, in, strlen(in) + 1);
 }
 
 /* Print N spaces (used in debug for target-depth).  */
@@ -146,9 +136,9 @@ print_spaces (unsigned int n)
 const char *
 concat (unsigned int num, ...)
 {
-  static unsigned int rlen = 0;
+  static size_t rlen = 0;
   static char *result = NULL;
-  unsigned int ri = 0;
+  size_t ri = 0;
   va_list args;
 
   va_start (args, num);
@@ -156,7 +146,7 @@ concat (unsigned int num, ...)
   while (num-- > 0)
     {
       const char *s = va_arg (args, const char *);
-      unsigned int l = xstrlen (s);
+      size_t l = xstrlen (s);
 
       if (l == 0)
         continue;
@@ -186,26 +176,6 @@ concat (unsigned int num, ...)
   return result;
 }
 
-
-#ifndef HAVE_STRERROR
-#undef  strerror
-char *
-strerror (int errnum)
-{
-  extern int errno, sys_nerr;
-#ifndef __DECC
-  extern char *sys_errlist[];
-#endif
-  static char buf[] = "Unknown error 12345678901234567890";
-
-  if (errno < sys_nerr)
-    return sys_errlist[errnum];
-
-  sprintf (buf, _("Unknown error %d"), errnum);
-  return buf;
-}
-#endif
-
 /* Like malloc but get fatal error if memory is exhausted.  */
 /* Don't bother if we're using dmalloc; it provides these for us.  */
 
@@ -217,29 +187,29 @@ strerror (int errnum)
 #undef xstrdup
 
 void *
-xmalloc (unsigned int size)
+xmalloc (size_t size)
 {
   /* Make sure we don't allocate 0, for pre-ISO implementations.  */
   void *result = malloc (size ? size : 1);
   if (result == 0)
-    OUT_OF_MEM();
+    out_of_memory ();
   return result;
 }
 
 
 void *
-xcalloc (unsigned int size)
+xcalloc (size_t size)
 {
   /* Make sure we don't allocate 0, for pre-ISO implementations.  */
   void *result = calloc (size ? size : 1, 1);
   if (result == 0)
-    OUT_OF_MEM();
+    out_of_memory ();
   return result;
 }
 
 
 void *
-xrealloc (void *ptr, unsigned int size)
+xrealloc (void *ptr, size_t size)
 {
   void *result;
 
@@ -248,7 +218,7 @@ xrealloc (void *ptr, unsigned int size)
     size = 1;
   result = ptr ? realloc (ptr, size) : malloc (size);
   if (result == 0)
-    OUT_OF_MEM();
+    out_of_memory ();
   return result;
 }
 
@@ -265,7 +235,7 @@ xstrdup (const char *ptr)
 #endif
 
   if (result == 0)
-    OUT_OF_MEM();
+    out_of_memory ();
 
 #ifdef HAVE_STRDUP
   return result;
@@ -277,14 +247,14 @@ xstrdup (const char *ptr)
 #endif  /* HAVE_DMALLOC_H */
 
 char *
-xstrndup (const char *str, unsigned int length)
+xstrndup (const char *str, size_t length)
 {
   char *result;
 
 #ifdef HAVE_STRNDUP
   result = strndup (str, length);
   if (result == 0)
-    OUT_OF_MEM();
+    out_of_memory ();
 #else
   result = xmalloc (length + 1);
   if (length > 0)
@@ -294,6 +264,30 @@ xstrndup (const char *str, unsigned int length)
 
   return result;
 }
+
+#ifndef HAVE_MEMRCHR
+void *
+memrchr(const void* str, int ch, size_t len)
+{
+  const char* sp = str;
+  const char* cp = sp;
+
+  if (len == 0)
+    return NULL;
+
+  cp += len - 1;
+
+  while (cp[0] != ch)
+    {
+      if (cp == sp)
+        return NULL;
+      --cp;
+    }
+
+  return (void*)cp;
+}
+#endif
+
 
 
 /* Limited INDEX:
@@ -317,8 +311,7 @@ lindex (const char *s, const char *limit, int c)
 char *
 end_of_token (const char *s)
 {
-  while (! STOP_SET (*s, MAP_BLANK|MAP_NUL))
-    ++s;
+  END_OF_TOKEN (s);
   return (char *)s;
 }
 
@@ -327,8 +320,7 @@ end_of_token (const char *s)
 char *
 next_token (const char *s)
 {
-  while (isblank ((unsigned char)*s))
-    ++s;
+  NEXT_TOKEN (s);
   return (char *)s;
 }
 
@@ -337,7 +329,7 @@ next_token (const char *s)
    of the token, so this function can be called repeatedly in a loop.  */
 
 char *
-find_next_token (const char **ptr, unsigned int *lengthptr)
+find_next_token (const char **ptr, size_t *lengthptr)
 {
   const char *p = next_token (*ptr);
 
@@ -349,6 +341,52 @@ find_next_token (const char **ptr, unsigned int *lengthptr)
     *lengthptr = *ptr - p;
 
   return (char *)p;
+}
+
+/* Write a BUFFER of size LEN to file descriptor FD.
+   Retry short writes from EINTR.  Return LEN, or -1 on error.  */
+ssize_t
+writebuf (int fd, const void *buffer, size_t len)
+{
+  const char *msg = buffer;
+  size_t l = len;
+  while (l)
+    {
+      ssize_t r;
+
+      EINTRLOOP (r, write (fd, msg, l));
+      if (r < 0)
+        return r;
+
+      l -= r;
+      msg += r;
+    }
+
+  return (ssize_t)len;
+}
+
+/* Read until we get LEN bytes from file descriptor FD, into BUFFER.
+   Retry short reads on EINTR.  If we get an error, return it.
+   Return 0 at EOF.  */
+ssize_t
+readbuf (int fd, void *buffer, size_t len)
+{
+  char *msg = buffer;
+  while (len)
+    {
+      ssize_t r;
+
+      EINTRLOOP (r, read (fd, msg, len));
+      if (r < 0)
+        return r;
+      if (r == 0)
+        break;
+
+      len -= r;
+      msg += r;
+    }
+
+  return (ssize_t)(msg - (char*)buffer);
 }
 
 
@@ -380,19 +418,6 @@ copy_dep_chain (const struct dep *d)
   return firstnew;
 }
 
-/* Free a chain of 'struct dep'.  */
-
-void
-free_dep_chain (struct dep *d)
-{
-  while (d != 0)
-    {
-      struct dep *df = d;
-      d = d->next;
-      free_dep (df);
-    }
-}
-
 /* Free a chain of struct nameseq.
    For struct dep chains use free_dep_chain.  */
 
@@ -403,8 +428,104 @@ free_ns_chain (struct nameseq *ns)
     {
       struct nameseq *t = ns;
       ns = ns->next;
-      free (t);
+      free_ns (t);
     }
+}
+
+
+#ifdef MAKE_MAINTAINER_MODE
+
+void
+spin (const char* type)
+{
+  char filenm[256];
+  struct stat dummy;
+
+  sprintf (filenm, ".make-spin-%s", type);
+
+  if (stat (filenm, &dummy) == 0)
+    {
+      fprintf (stderr, "SPIN on %s\n", filenm);
+      do
+#ifdef WINDOWS32
+        Sleep (1000);
+#else
+        sleep (1);
+#endif
+      while (stat (filenm, &dummy) == 0);
+    }
+}
+
+#endif
+
+
+
+/* Provide support for temporary files.  */
+
+#ifndef HAVE_STDLIB_H
+# ifdef HAVE_MKSTEMP
+int mkstemp (char *template);
+# else
+char *mktemp (char *template);
+# endif
+#endif
+
+#ifndef HAVE_UMASK
+mode_t
+umask (mode_t mask)
+{
+  return 0;
+}
+#endif
+
+FILE *
+get_tmpfile (char **name, const char *template)
+{
+  FILE *file;
+#ifdef HAVE_FDOPEN
+  int fd;
+#endif
+
+  /* Preserve the current umask, and set a restrictive one for temp files.  */
+  mode_t mask = umask (0077);
+
+#if defined(HAVE_MKSTEMP) || defined(HAVE_MKTEMP)
+# define TEMPLATE_LEN   strlen (template)
+#else
+# define TEMPLATE_LEN   L_tmpnam
+#endif
+  *name = xmalloc (TEMPLATE_LEN + 1);
+  strcpy (*name, template);
+
+#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN)
+  /* It's safest to use mkstemp(), if we can.  */
+  EINTRLOOP (fd, mkstemp (*name));
+  if (fd == -1)
+    file = NULL;
+  else
+    file = fdopen (fd, "w");
+#else
+# ifdef HAVE_MKTEMP
+  (void) mktemp (*name);
+# else
+  (void) tmpnam (*name);
+# endif
+
+# ifdef HAVE_FDOPEN
+  /* Can't use mkstemp(), but guard against a race condition.  */
+  EINTRLOOP (fd, open (*name, O_CREAT|O_EXCL|O_WRONLY, 0600));
+  if (fd == -1)
+    return 0;
+  file = fdopen (fd, "w");
+# else
+  /* Not secure, but what can we do?  */
+  file = fopen (*name, "w");
+# endif
+#endif
+
+  umask (mask);
+
+  return file;
 }
 
 
@@ -417,8 +538,8 @@ strcasecmp (const char *s1, const char *s2)
 {
   while (1)
     {
-      int c1 = (int) *(s1++);
-      int c2 = (int) *(s2++);
+      int c1 = (unsigned char) *(s1++);
+      int c2 = (unsigned char) *(s2++);
 
       if (isalpha (c1))
         c1 = tolower (c1);
@@ -442,8 +563,8 @@ strncasecmp (const char *s1, const char *s2, int n)
 {
   while (n-- > 0)
     {
-      int c1 = (int) *(s1++);
-      int c2 = (int) *(s2++);
+      int c1 = (unsigned char) *(s1++);
+      int c2 = (unsigned char) *(s2++);
 
       if (isalpha (c1))
         c1 = tolower (c1);

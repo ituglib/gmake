@@ -1,5 +1,5 @@
 /* Definition of target file data structures for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -20,6 +20,11 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
    All of these are chained together through 'next'.  */
 
 #include "hash.h"
+
+struct commands;
+struct dep;
+struct variable;
+struct variable_set_list;
 
 struct file
   {
@@ -58,6 +63,8 @@ struct file
     FILE_TIMESTAMP last_mtime;  /* File's modtime, if already known.  */
     FILE_TIMESTAMP mtime_before_update; /* File's modtime before any updating
                                            has been performed.  */
+    unsigned int considered;    /* equal to 'considered' if file has been
+                                   considered on current scan of goal chain */
     int command_flags;          /* Flags OR'd in for cmds; see commands.h.  */
     enum update_status          /* Status of the last attempt to update.  */
       {
@@ -66,7 +73,7 @@ struct file
         us_question,            /* Needs to be updated (-q is is set).  */
         us_failed               /* Update failed.  */
       } update_status ENUM_BITFIELD (2);
-    enum cmd_state              /* State of the commands.  */
+    enum cmd_state              /* State of commands.  ORDER IS IMPORTANT!  */
       {
         cs_not_started = 0,     /* Not yet started.  Must be 0!  */
         cs_deps_running,        /* Dep commands running.  */
@@ -96,20 +103,19 @@ struct file
     unsigned int ignore_vpath:1;/* Nonzero if we threw out VPATH name.  */
     unsigned int pat_searched:1;/* Nonzero if we already searched for
                                    pattern-specific variables.  */
-    unsigned int considered:1;  /* equal to 'considered' if file has been
-                                   considered on current scan of goal chain */
     unsigned int no_diag:1;     /* True if the file failed to update and no
                                    diagnostics has been issued (dontcare). */
   };
 
 
-extern struct file *suffix_file, *default_file;
+extern struct file *default_file;
 
 
 struct file *lookup_file (const char *name);
 struct file *enter_file (const char *name);
 struct dep *split_prereqs (char *prereqstr);
 struct dep *enter_prereqs (struct dep *prereqs, const char *stem);
+struct dep *expand_extra_prereqs (const struct variable *extra);
 void remove_intermediates (int sig);
 void snap_deps (void);
 void rename_file (struct file *file, const char *name);
@@ -117,9 +123,12 @@ void rehash_file (struct file *file, const char *name);
 void set_command_state (struct file *file, enum cmd_state state);
 void notice_finished_file (struct file *file);
 void init_hash_files (void);
+void verify_file_data_base (void);
 char *build_target_list (char *old_list);
 void print_prereqs (const struct dep *deps);
 void print_file_data_base (void);
+int try_implicit_rule (struct file *file, unsigned int depth);
+int stemlen_compare (const void *v1, const void *v2);
 
 #if FILE_TIMESTAMP_HI_RES
 # define FILE_TIMESTAMP_STAT_MODTIME(fname, st) \

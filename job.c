@@ -1,5 +1,5 @@
 /* Job execution and handling for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -19,23 +19,19 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <assert.h>
 #include <string.h>
 
-#ifdef __TANDEM
-#include <unistd.h>
-#include <time.h>
-#endif
-
 #include "job.h"
 #include "debug.h"
 #include "filedef.h"
 #include "commands.h"
 #include "variable.h"
-#include "debug.h"
-
-#include <string.h>
+#include "os.h"
 
 /* Default shell to use.  */
 #ifdef WINDOWS32
-#include <windows.h>
+# ifdef HAVE_STRINGS_H
+#  include <strings.h>	/* for strcasecmp, strncasecmp */
+# endif
+# include <windows.h>
 
 const char *default_shell = "sh.exe";
 int no_default_sh_exe = 1;
@@ -65,13 +61,19 @@ int batch_mode_shell = 0;
 #elif defined (VMS)
 
 # include <descrip.h>
+# include <stsdef.h>
 const char *default_shell = "";
 int batch_mode_shell = 0;
 
-#elif defined (__riscos__)
+#define strsignal vms_strsignal
+char * vms_strsignal (int status);
 
-const char *default_shell = "";
-int batch_mode_shell = 0;
+#ifndef C_FACILITY_NO
+# define C_FACILITY_NO 0x350000
+#endif
+#ifndef VMS_POSIX_EXIT_MASK
+# define VMS_POSIX_EXIT_MASK (C_FACILITY_NO | 0xA000)
+#endif
 
 #else
 
@@ -139,6 +141,11 @@ extern int wait3 ();
 #  define WAIT_NOHANG(status)   wait3 ((status), WNOHANG, (struct rusage *) 0)
 # endif /* Have wait3.  */
 #endif /* Have waitpid.  */
+
+#ifdef USE_POSIX_SPAWN
+# include <spawn.h>
+# include "findprog.h"
+#endif
 
 #if !defined (wait) && !defined (POSIX)
 int wait ();
@@ -213,14 +220,10 @@ pid2str (pid_t pid)
   return pidstring;
 }
 
+#ifndef HAVE_GETLOADAVG
 int getloadavg (double loadavg[], int nelem);
-int start_remote_job (char **argv, char **envp, int stdin_fd, int *is_remote,
-                      int *id_ptr, int *used_stdin);
-int start_remote_job_p (int);
-int remote_status (int *exit_code_ptr, int *signal_ptr, int *coredump_ptr,
-                   int block);
+#endif
 
-RETSIGTYPE child_handler (int);
 static void free_child (struct child *);
 static void start_job_command (struct child *child);
 static int load_too_high (void);
@@ -292,7 +295,7 @@ create_batch_file (char const *base, int unixy, int *fd)
      launches the next one.  */
   static unsigned uniq = 0;
   static int second_loop = 0;
-  const unsigned sizemax = strlen (base) + strlen (ext) + 10;
+  const size_t sizemax = strlen (base) + strlen (ext) + 10;
 
   if (path_size == 0)
     {
@@ -462,7 +465,7 @@ is_bourne_compatible_shell (const char *path)
   for (s = unix_shells; *s != NULL; ++s)
     {
 #if defined(WINDOWS32) || defined(__MSDOS__)
-      unsigned int len = strlen (*s);
+      size_t len = strlen (*s);
       if ((strlen (name) >= len && STOP_SET (name[len], MAP_DOT|MAP_NUL))
           && strncasecmp (name, *s, len) == 0)
 #else
@@ -475,6 +478,62 @@ is_bourne_compatible_shell (const char *path)
   return 0;
 }
 
+#ifdef POSIX
+extern sigset_t fatal_signal_set;
+
+static void
+block_sigs ()
+{
+  sigprocmask (SIG_BLOCK, &fatal_signal_set, (sigset_t *) 0);
+}
+
+static void
+unblock_sigs ()
+{
+  sigprocmask (SIG_UNBLOCK, &fatal_signal_set, (sigset_t *) 0);
+}
+
+void
+unblock_all_sigs ()
+{
+  sigset_t empty;
+  sigemptyset (&empty);
+  sigprocmask (SIG_SETMASK, &empty, (sigset_t *) 0);
+}
+
+#elif defined(HAVE_SIGSETMASK)
+
+extern int fatal_signal_mask;
+
+static void
+block_sigs ()
+{
+  sigblock (fatal_signal_mask);
+}
+
+static void
+unblock_sigs ()
+{
+  sigsetmask (siggetmask () & ~fatal_signal_mask);
+}
+
+void
+unblock_all_sigs ()
+{
+  sigsetmask (0);
+}
+
+#else
+
+#define block_sigs()
+#define unblock_sigs()
+
+void
+unblock_all_sigs ()
+{
+}
+
+#endif
 
 /* Write an error message describing the exit status given in
    EXIT_CODE, EXIT_SIG, and COREDUMP, for the target TARGET_NAME.
@@ -488,11 +547,11 @@ child_error (struct child *child,
   const char *post = "";
   const char *dump = "";
   const struct file *f = child->file;
-  const gmk_floc *flocp = &f->cmds->fileinfo;
+  const floc *flocp = &f->cmds->fileinfo;
   const char *nm;
-  size_t l = strlen (f->name);
+  size_t l;
 
-  if (ignored && silent_flag)
+  if (ignored && run_silent)
     return;
 
   if (exit_sig && coredump)
@@ -508,33 +567,17 @@ child_error (struct child *child,
     nm = _("<builtin>");
   else
     {
-      char *a = alloca (strlen (flocp->filenm) + 1 + 11 + 1);
-      sprintf (a, "%s:%lu", flocp->filenm, flocp->lineno);
+      char *a = alloca (strlen (flocp->filenm) + 6 + INTSTR_LENGTH + 1);
+      sprintf (a, "%s:%lu", flocp->filenm, flocp->lineno + flocp->offset);
       nm = a;
     }
 
+  l = strlen (pre) + strlen (nm) + strlen (f->name) + strlen (post);
+
   OUTPUT_SET (&child->output);
 
-  message (0, l + strlen (nm),
-           _("%s: recipe for target '%s' failed"), nm, f->name);
+  show_goal_error ();
 
-  l += strlen (pre) + strlen (post);
-
-#ifdef VMS
-  if ((exit_code & 1) != 0)
-    {
-      OUTPUT_UNSET ();
-      return;
-    }
-  /* Check for a Posix compatible VMS style exit code:
-     decode and print the Posix exit code */
-  if ((exit_code & 0x35a000) == 0x35a000)
-    error(NILF, l + INTSTR_LENGTH, _("%s[%s] Error %d%s"), pre, f->name,
-        ((exit_code & 0x7f8) >> 3), post);
-  else
-    error(NILF, l + INTSTR_LENGTH, _("%s[%s] Error 0x%x%s"), pre, f->name,
-        exit_code, post);
-#else
 #ifdef _GUARDIAN_TARGET /* Point out a warning if there was one! */
   if (!ignore_tandem_warning(exit_code, child->command_lines[0]))
     error(NILF, l + INTSTR_LENGTH, _("*** [%s] Warning %d"), nm, exit_code);
@@ -550,9 +593,8 @@ child_error (struct child *child,
     {
       const char *s = strsignal (exit_sig);
       error (NILF, l + strlen (s) + strlen (dump),
-             _("%s[%s] %s%s%s"), pre, f->name, s, dump, post);
+             "%s[%s: %s] %s%s%s", pre, nm, f->name, s, dump, post);
     }
-#endif /* VMS */
 
   OUTPUT_UNSET ();
 }
@@ -560,10 +602,11 @@ child_error (struct child *child,
 
 /* Handle a dead child.  This handler may or may not ever be installed.
 
-   If we're using the jobserver feature, we need it.  First, installing it
-   ensures the read will interrupt on SIGCHLD.  Second, we close the dup'd
-   read FD to ensure we don't enter another blocking read without reaping all
-   the dead children.  In this case we don't need the dead_children count.
+   If we're using the jobserver feature without pselect(), we need it.
+   First, installing it ensures the read will interrupt on SIGCHLD.  Second,
+   we close the dup'd read FD to ensure we don't enter another blocking read
+   without reaping all the dead children.  In this case we don't need the
+   dead_children count.
 
    If we don't have either waitpid or wait3, then make is unreliable, but we
    use the dead_children count to reap children as best we can.  */
@@ -575,23 +618,15 @@ child_handler (int sig UNUSED)
 {
   ++dead_children;
 
-  if (job_rfd >= 0)
-    {
-      close (job_rfd);
-      job_rfd = -1;
-    }
+  jobserver_signal ();
 
 #ifdef __EMX__
   /* The signal handler must called only once! */
   signal (SIGCHLD, SIG_DFL);
 #endif
-
-  /* This causes problems if the SIGCHLD interrupts a printf().
-  DB (DB_JOBS, (_("Got a SIGCHLD; %u unreaped children.\n"), dead_children));
-  */
 }
 
-extern int shell_function_pid, shell_function_completed;
+extern pid_t shell_function_pid;
 
 /* Reap all dead children, storing the returned status and the new command
    state ('cs_finished') in the 'file' member of the 'struct child' for the
@@ -626,7 +661,7 @@ reap_children (int block, int err)
   while ((children != 0 || shell_function_pid != 0)
          && (block || REAP_MORE))
     {
-      int remote = 0;
+      unsigned int remote = 0;
       pid_t pid;
       int exit_code, exit_sig, coredump;
       struct child *lastc, *c;
@@ -668,10 +703,22 @@ reap_children (int block, int err)
 
       any_remote = 0;
       any_local = shell_function_pid != 0;
-      for (c = children; c != 0; c = c->next)
+      lastc = 0;
+      for (c = children; c != 0; lastc = c, c = c->next)
         {
           any_remote |= c->remote;
           any_local |= ! c->remote;
+
+          /* If pid < 0, this child never even started.  Handle it.  */
+          if (c->pid < 0)
+            {
+              exit_sig = 0;
+              coredump = 0;
+              /* According to POSIX, 127 is used for command not found.  */
+              exit_code = 127;
+              goto process_child;
+            }
+
           DB (DB_JOBS, (_("Live child %p (%s) PID %s %s\n"),
                         c, c->file->name, pid2str (c->pid),
                         c->remote ? _(" (remote)") : ""));
@@ -692,7 +739,9 @@ reap_children (int block, int err)
       else if (pid < 0)
         {
           /* A remote status command failed miserably.  Punt.  */
+#if !defined(__MSDOS__) && !defined(_AMIGA) && !defined(WINDOWS32)
         remote_status_lose:
+#endif
           pfatal_with_name ("remote_status");
         }
       else
@@ -702,15 +751,24 @@ reap_children (int block, int err)
           if (any_local)
             {
 #ifdef VMS
+              /* Todo: This needs more untangling multi-process support */
+              /* Just do single child process support now */
               vmsWaitForChildren (&status);
               pid = c->pid;
+
+              /* VMS failure status can not be fully translated */
+              status = $VMS_STATUS_SUCCESS (c->cstatus) ? 0 : (1 << 8);
+
+              /* A Posix failure can be exactly translated */
+              if ((c->cstatus & VMS_POSIX_EXIT_MASK) == VMS_POSIX_EXIT_MASK)
+                status = (c->cstatus >> 3 & 255) << 8;
 #else
 #ifdef WAIT_NOHANG
               if (!block)
                 pid = WAIT_NOHANG (&status);
               else
 #endif
-                EINTRLOOP(pid, wait (&status));
+                EINTRLOOP (pid, wait (&status));
 #endif /* !VMS */
             }
           else
@@ -727,10 +785,6 @@ reap_children (int block, int err)
               exit_code = WEXITSTATUS (status);
               exit_sig = WIFSIGNALED (status) ? WTERMSIG (status) : 0;
               coredump = WCOREDUMP (status);
-
-              /* If we have started jobs in this second, remove one.  */
-              if (job_counter)
-                --job_counter;
             }
           else
             {
@@ -816,7 +870,10 @@ reap_children (int block, int err)
                 /* get exit data */
                 exit_code = process_exit_code (hPID);
 
-                if (werr)
+                /* the extra tests of exit_code are here to prevent
+                   map_windows32_error_to_string from calling 'fatal',
+                   which will then call reap_children again */
+                if (werr && exit_code > 0 && exit_code < WSABASEERR)
                   fprintf (stderr, "make (e=%d): %s", exit_code,
                            map_windows32_error_to_string (exit_code));
 
@@ -848,15 +905,9 @@ reap_children (int block, int err)
       /* Check if this is the child of the 'shell' function.  */
       if (!remote && pid == shell_function_pid)
         {
-          /* It is.  Leave an indicator for the 'shell' function.  */
-          if (exit_sig == 0 && exit_code == 127)
-            shell_function_completed = -1;
-          else
-            shell_function_completed = 1;
+          shell_completed (exit_code, exit_sig);
           break;
         }
-
-      child_failed = exit_sig != 0 || exit_code != 0;
 
       /* Search for a child matching the deceased one.  */
       lastc = 0;
@@ -869,10 +920,54 @@ reap_children (int block, int err)
            Ignore it; it was inherited from our invoker.  */
         continue;
 
-      DB (DB_JOBS, (child_failed
-                    ? _("Reaping losing child %p PID %s %s\n")
-                    : _("Reaping winning child %p PID %s %s\n"),
+      DB (DB_JOBS, (exit_sig == 0 && exit_code == 0
+                    ? _("Reaping winning child %p PID %s %s\n")
+                    : _("Reaping losing child %p PID %s %s\n"),
                     c, pid2str (c->pid), c->remote ? _(" (remote)") : ""));
+
+      /* If we have started jobs in this second, remove one.  */
+      if (job_counter)
+        --job_counter;
+
+    process_child:
+
+#if defined(USE_POSIX_SPAWN)
+      /* Some versions of posix_spawn() do not detect errors such as command
+         not found until after they fork.  In that case they will exit with a
+         code of 127.  Try to detect that and provide a useful error message.
+         Otherwise we'll just show the error below, as normal.  */
+      if (exit_sig == 0 && exit_code == 127 && c->cmd_name)
+        {
+          const char *e = NULL;
+          struct stat st;
+          int r;
+
+          /* There are various ways that this will show a different error than
+             fork/exec.  To really get the right error we'd have to fall back
+             to fork/exec but I don't want to bother with that.  Just do the
+             best we can.  */
+
+          EINTRLOOP(r, stat(c->cmd_name, &st));
+          if (r < 0)
+            e = strerror (errno);
+          else if (S_ISDIR(st.st_mode) || !(st.st_mode & S_IXUSR))
+            e = strerror (EACCES);
+          else if (st.st_size == 0)
+            e = strerror (ENOEXEC);
+
+          if (e)
+            OSS(error, NILF, "%s: %s", c->cmd_name, e);
+        }
+#endif
+
+      /* Determine the failure status: 0 for success, 1 for updating target in
+         question mode, 2 for anything else.  */
+      if (exit_sig == 0 && exit_code == 0)
+        child_failed = MAKE_SUCCESS;
+      else if (exit_sig == 0 && exit_code == 1 && question_flag && c->recursive)
+        child_failed = MAKE_TROUBLE;
+      else
+        child_failed = MAKE_FAILURE;
 
       if (c->sh_batch_file)
         {
@@ -915,10 +1010,10 @@ reap_children (int block, int err)
              delete non-precious targets, and abort.  */
           static int delete_on_error = -1;
 
-          if (!dontcare)
+          if (!dontcare && child_failed == MAKE_FAILURE)
             child_error (c, exit_code, exit_sig, coredump, 0);
 
-          c->file->update_status = us_failed;
+          c->file->update_status = child_failed == MAKE_FAILURE ? us_failed : us_question;
           if (delete_on_error == -1)
             {
               struct file *f = lookup_file (".DELETE_ON_ERROR");
@@ -992,7 +1087,7 @@ reap_children (int block, int err)
 
       /* At this point c->file->update_status is success or failed.  But
          c->file->command_state is still cs_running if all the commands
-         ran; notice_finish_file looks for cs_running to tell it that
+         ran; notice_finished_file looks for cs_running to tell it that
          it's interesting to check the file's modtime again now.  */
 
       if (! handling_fatal_signal)
@@ -1001,9 +1096,6 @@ reap_children (int block, int err)
            update_status to its also_make files.  */
         notice_finished_file (c->file);
 
-      DB (DB_JOBS, (_("Removing child %p PID %s%s from chain.\n"),
-                    c, pid2str (c->pid), c->remote ? _(" (remote)") : ""));
-
       /* Block fatal signals while frobnicating the list, so that
          children and job_slots_used are always consistent.  Otherwise
          a fatal signal arriving after the child is off the chain and
@@ -1011,9 +1103,15 @@ reap_children (int block, int err)
          live and call reap_children again.  */
       block_sigs ();
 
+      if (c->pid > 0)
+        {
+          DB (DB_JOBS, (_("Removing child %p PID %s%s from chain.\n"),
+                        c, pid2str (c->pid), c->remote ? _(" (remote)") : ""));
+        }
+
       /* There is now another slot open.  */
       if (job_slots_used > 0)
-        --job_slots_used;
+        job_slots_used -= c->jobslot;
 
       /* Remove the child from the chain and free it.  */
       if (lastc == 0)
@@ -1030,7 +1128,7 @@ reap_children (int block, int err)
       if (!err && child_failed && !dontcare && !keep_going_flag &&
           /* fatal_error_signal will die with the right signal.  */
           !handling_fatal_signal)
-        die (MAKE_FAILURE);
+        die (child_failed);
 
       /* Only block for one child.  */
       block = 0;
@@ -1053,35 +1151,12 @@ free_child (struct child *child)
   /* If we're using the jobserver and this child is not the only outstanding
      job, put a token back into the pipe for it.  */
 
-#ifdef WINDOWS32
-  if (has_jobserver_semaphore () && jobserver_tokens > 1)
+  if (jobserver_enabled () && jobserver_tokens > 1)
     {
-      if (! release_jobserver_semaphore ())
-        {
-          DWORD err = GetLastError ();
-          const char *estr = map_windows32_error_to_string (err);
-          ONS (fatal, NILF,
-               _("release jobserver semaphore: (Error %ld: %s)"), err, estr);
-        }
-
-      DB (DB_JOBS, (_("Released token for child %p (%s).\n"), child, child->file->name));
-    }
-#else
-  if (job_fds[1] >= 0 && jobserver_tokens > 1)
-    {
-      char token = '+';
-      int r;
-
-      /* Write a job token back to the pipe.  */
-
-      EINTRLOOP (r, write (job_fds[1], &token, 1));
-      if (r != 1)
-        pfatal_with_name (_("write jobserver"));
-
+      jobserver_release (1);
       DB (DB_JOBS, (_("Released token for child %p (%s).\n"),
                     child, child->file->name));
     }
-#endif
 
   --jobserver_tokens;
 
@@ -1090,7 +1165,7 @@ free_child (struct child *child)
 
   if (child->command_lines != 0)
     {
-      register unsigned int i;
+      unsigned int i;
       for (i = 0; i < child->file->cmds->ncommand_lines; ++i)
         free (child->command_lines[i]);
       free (child->command_lines);
@@ -1098,91 +1173,16 @@ free_child (struct child *child)
 
   if (child->environment != 0)
     {
-      register char **ep = child->environment;
+      char **ep = child->environment;
       while (*ep != 0)
         free (*ep++);
       free (child->environment);
     }
 
+  free (child->cmd_name);
   free (child);
 }
 
-#ifdef POSIX
-extern sigset_t fatal_signal_set;
-#endif
-
-void
-block_sigs (void)
-{
-#ifdef POSIX
-  (void) sigprocmask (SIG_BLOCK, &fatal_signal_set, (sigset_t *) 0);
-#else
-# ifdef HAVE_SIGSETMASK
-  (void) sigblock (fatal_signal_mask);
-# endif
-#endif
-}
-
-#ifdef POSIX
-void
-unblock_sigs (void)
-{
-  sigset_t empty;
-  sigemptyset (&empty);
-  sigprocmask (SIG_SETMASK, &empty, (sigset_t *) 0);
-}
-#endif
-
-#if defined(MAKE_JOBSERVER) && !defined(WINDOWS32)
-RETSIGTYPE
-job_noop (int sig UNUSED)
-{
-}
-/* Set the child handler action flags to FLAGS.  */
-static void
-set_child_handler_action_flags (int set_handler, int set_alarm)
-{
-  struct sigaction sa;
-
-#ifdef __EMX__
-  /* The child handler must be turned off here.  */
-  signal (SIGCHLD, SIG_DFL);
-#endif
-
-  memset (&sa, '\0', sizeof sa);
-  sa.sa_handler = child_handler;
-  sa.sa_flags = set_handler ? 0 : SA_RESTART;
-#if defined SIGCHLD
-  sigaction (SIGCHLD, &sa, NULL);
-#endif
-#if defined SIGCLD && SIGCLD != SIGCHLD
-  sigaction (SIGCLD, &sa, NULL);
-#endif
-#if defined SIGALRM
-  if (set_alarm)
-    {
-      /* If we're about to enter the read(), set an alarm to wake up in a
-         second so we can check if the load has dropped and we can start more
-         work.  On the way out, turn off the alarm and set SIG_DFL.  */
-      if (set_handler)
-        {
-          sa.sa_handler = job_noop;
-          sa.sa_flags = 0;
-          sigaction (SIGALRM, &sa, NULL);
-          alarm (1);
-        }
-      else
-        {
-          alarm (0);
-          sa.sa_handler = SIG_DFL;
-          sa.sa_flags = 0;
-          sigaction (SIGALRM, &sa, NULL);
-        }
-    }
-#endif
-}
-#endif
-
 
 /* Start a job to run the commands specified in CHILD.
    CHILD is updated to reflect the commands and ID of the child process.
@@ -1194,17 +1194,14 @@ set_child_handler_action_flags (int set_handler, int set_alarm)
 static void
 start_job_command (struct child *child)
 {
-#if !defined(_AMIGA) && !defined(WINDOWS32)
-  static int bad_stdin = -1;
-#endif
   int flags;
   char *p;
 #ifdef VMS
+# define FREE_ARGV(_a)
   char *argv;
 #else
+# define FREE_ARGV(_a) do{ if (_a) { free ((_a)[0]); free (_a); } }while(0)
   char **argv;
-  int outfd = FD_STDOUT;
-  int errfd = FD_STDERR;
 #endif
 
   /* If we have a completely empty commandset, stop now.  */
@@ -1227,10 +1224,13 @@ start_job_command (struct child *child)
         flags |= COMMANDS_RECURSE;
       else if (*p == '-')
         child->noerror = 1;
-      else if (!isblank ((unsigned char)*p))
+      /* Don't skip newlines.  */
+      else if (!ISBLANK (*p))
         break;
       ++p;
     }
+
+  child->recursive = ((flags & COMMANDS_RECURSE) != 0);
 
   /* Update the file's command flags with any new ones we found.  We only
      keep the COMMANDS_RECURSE setting.  Even this isn't 100% correct; we are
@@ -1238,8 +1238,7 @@ start_job_command (struct child *child)
      multiline define/endef scripts where only one line is marked "+".  In
      order to really fix this, we'll have to keep a lines_flags for every
      actual line, after expansion.  */
-  child->file->cmds->lines_flags[child->command_line - 1]
-    |= flags & COMMANDS_RECURSE;
+  child->file->cmds->lines_flags[child->command_line - 1] |= flags & COMMANDS_RECURSE;
 
   /* POSIX requires that a recipe prefix after a backslash-newline should
      be ignored.  Remove it now so the output is correct.  */
@@ -1261,13 +1260,25 @@ start_job_command (struct child *child)
   {
     char *end = 0;
 #ifdef VMS
+    /* Skip any leading whitespace */
+    while (*p)
+      {
+        if (!ISSPACE (*p))
+          {
+            if (*p != '\\')
+              break;
+            if ((p[1] != '\n') && (p[1] != 'n') && (p[1] != 't'))
+              break;
+          }
+        p++;
+      }
+
     argv = p;
-    /* Although construct_command_argv contains some code for VMS, it was/is
-       not called/used.  Please note, for VMS argv is a string (not an array
-       of strings) which contains the complete command line, which for
-       multi-line variables still includes the newlines.  So detect newlines
-       and set 'end' (which is used for child->command_ptr) instead of
-       (re-)writing construct_command_argv */
+    /* Please note, for VMS argv is a string (not an array of strings) which
+       contains the complete command line, which for multi-line variables
+       still includes the newlines.  So detect newlines and set 'end' (which
+       is used for child->command_ptr) instead of (re-)writing
+       construct_command_argv */
     if (!one_shell)
       {
         char *s = p;
@@ -1306,26 +1317,25 @@ start_job_command (struct child *child)
      error is 2.  */
   if (argv != 0 && question_flag && !(flags & COMMANDS_RECURSE))
     {
-#ifndef VMS
-      free (argv[0]);
-      free (argv);
+      FREE_ARGV (argv);
+#ifdef VMS
+      /* On VMS, argv[0] can be a null string here */
+      if (argv[0] != 0)
+        {
 #endif
-      child->file->update_status = us_question;
-      notice_finished_file (child->file);
-      return;
+          child->file->update_status = us_question;
+          notice_finished_file (child->file);
+          return;
+#ifdef VMS
+        }
+#endif
     }
 
   if (touch_flag && !(flags & COMMANDS_RECURSE))
     {
       /* Go on to the next command.  It might be the recursive one.
          We construct ARGV only to find the end of the command line.  */
-#ifndef VMS
-      if (argv)
-        {
-          free (argv[0]);
-          free (argv);
-        }
-#endif
+      FREE_ARGV (argv);
       argv = 0;
     }
 
@@ -1368,7 +1378,7 @@ start_job_command (struct child *child)
 
   /* Print the command if appropriate.  */
   if (just_print_flag || trace_flag
-      || (!(flags & COMMANDS_SILENT) && !silent_flag))
+      || (!(flags & COMMANDS_SILENT) && !run_silent))
     OS (message, 0, "%s", p);
 
   /* Tell update_goal_chain that a command has been started on behalf of
@@ -1401,8 +1411,7 @@ start_job_command (struct child *child)
       && (argv[2] && argv[2][0] == ':' && argv[2][1] == '\0')
       && argv[3] == NULL)
     {
-      free (argv[0]);
-      free (argv);
+      FREE_ARGV (argv);
       goto next_command;
     }
 #endif  /* !VMS && !_AMIGA && !GUARDIAN */
@@ -1411,10 +1420,7 @@ start_job_command (struct child *child)
 
   if (just_print_flag && !(flags & COMMANDS_RECURSE))
     {
-#ifndef VMS
-      free (argv[0]);
-      free (argv);
-#endif
+      FREE_ARGV (argv);
       goto next_command;
     }
 
@@ -1426,32 +1432,6 @@ start_job_command (struct child *child)
   fflush (stdout);
   fflush (stderr);
 
-#ifndef VMS
-#if !defined(WINDOWS32) && !defined(_AMIGA) && !defined(__MSDOS__) && !defined(_GUARDIAN_TARGET)
-
-  /* Set up a bad standard input that reads from a broken pipe.  */
-
-  if (bad_stdin == -1)
-    {
-      /* Make a file descriptor that is the read end of a broken pipe.
-         This will be used for some children's standard inputs.  */
-      int pd[2];
-      if (pipe (pd) == 0)
-        {
-          /* Close the write side.  */
-          (void) close (pd[1]);
-          /* Save the read side.  */
-          bad_stdin = pd[0];
-
-          /* Set the descriptor to close on exec, so it does not litter any
-             child's descriptor table.  When it is dup2'd onto descriptor 0,
-             that descriptor will not close on exec.  */
-          CLOSE_ON_EXEC (bad_stdin);
-        }
-    }
-
-#endif /* !WINDOWS32 && !_AMIGA && !__MSDOS__ && !GUARDIAN */
-
   /* Decide whether to give this child the 'good' standard input
      (one that points to the terminal or whatever), or the 'bad' one
      that points to the read side of a broken pipe.  */
@@ -1459,8 +1439,6 @@ start_job_command (struct child *child)
   child->good_stdin = !good_stdin_used;
   if (child->good_stdin)
     good_stdin_used = 1;
-
-#endif /* !VMS */
 
   child->deleted = 0;
 
@@ -1476,9 +1454,10 @@ start_job_command (struct child *child)
   /* start_waiting_job has set CHILD->remote if we can start a remote job.  */
   if (child->remote)
     {
-      int is_remote, id, used_stdin;
+      int is_remote, used_stdin;
+      pid_t id;
       if (start_remote_job (argv, child->environment,
-                            child->good_stdin ? 0 : bad_stdin,
+                            child->good_stdin ? 0 : get_bad_stdin (),
                             &is_remote, &id, &used_stdin))
         /* Don't give up; remote execution may fail for various reasons.  If
            so, simply run the job locally.  */
@@ -1507,94 +1486,20 @@ start_job_command (struct child *child)
       child->remote = 0;
 
 #ifdef VMS
-      if (!child_execute_job (argv, child))
-        {
-          /* Fork failed!  */
-          perror_with_name ("fork", "");
-          goto error;
-        }
+      child->pid = child_execute_job ((struct childbase *)child, 1, argv);
 
 #else
 
       parent_environ = environ;
 
-#ifndef NO_OUTPUT_SYNC
-      /* Divert child output if output_sync in use.  */
-      if (child->output.syncout)
-        {
-          if (child->output.out >= 0)
-            outfd = child->output.out;
-          if (child->output.err >= 0)
-            errfd = child->output.err;
-        }
-#endif
-# ifdef __EMX__
-      /* If we aren't running a recursive command and we have a jobserver
-         pipe, close it before exec'ing.  */
-      if (!(flags & COMMANDS_RECURSE) && job_fds[0] >= 0)
-        {
-          CLOSE_ON_EXEC (job_fds[0]);
-          CLOSE_ON_EXEC (job_fds[1]);
-        }
-      if (job_rfd >= 0)
-        CLOSE_ON_EXEC (job_rfd);
+      jobserver_pre_child (flags & COMMANDS_RECURSE);
 
-      /* Never use fork()/exec() here! Use spawn() instead in exec_command() */
-      child->pid = child_execute_job (child->good_stdin ? FD_STDIN : bad_stdin,
-                                      outfd, errfd,
-                                      argv, child->environment);
-      if (child->pid < 0)
-        {
-          /* spawn failed!  */
-          unblock_sigs ();
-          perror_with_name ("spawn", "");
-          goto error;
-        }
+      child->pid = child_execute_job ((struct childbase *)child,
+                                      child->good_stdin, argv);
 
-      /* undo CLOSE_ON_EXEC() after the child process has been started */
-      if (!(flags & COMMANDS_RECURSE) && job_fds[0] >= 0)
-        {
-          fcntl (job_fds[0], F_SETFD, 0);
-          fcntl (job_fds[1], F_SETFD, 0);
-        }
-      if (job_rfd >= 0)
-        fcntl (job_rfd, F_SETFD, 0);
-
-#else  /* !__EMX__ */
-
-      child->pid = fork ();
       environ = parent_environ; /* Restore value child may have clobbered.  */
-      if (child->pid == 0)
-        {
-          /* We are the child side.  */
-          unblock_sigs ();
+      jobserver_post_child (flags & COMMANDS_RECURSE);
 
-          /* If we aren't running a recursive command and we have a jobserver
-             pipe, close it before exec'ing.  */
-          if (!(flags & COMMANDS_RECURSE) && job_fds[0] >= 0)
-            {
-              close (job_fds[0]);
-              close (job_fds[1]);
-            }
-          if (job_rfd >= 0)
-            close (job_rfd);
-
-#ifdef SET_STACK_SIZE
-          /* Reset limits, if necessary.  */
-          if (stack_limit.rlim_cur)
-            setrlimit (RLIMIT_STACK, &stack_limit);
-#endif
-          child_execute_job (child->good_stdin ? FD_STDIN : bad_stdin,
-                             outfd, errfd, argv, child->environment);
-        }
-      else if (child->pid < 0)
-        {
-          /* Fork failed!  */
-          unblock_sigs ();
-          perror_with_name ("fork", "");
-          goto error;
-        }
-# endif  /* !__EMX__ */
 #endif /* !VMS */
     }
 
@@ -1675,6 +1580,8 @@ start_job_command (struct child *child)
   {
       HANDLE hPID;
       char* arg0;
+      int outfd = FD_STDOUT;
+      int errfd = FD_STDERR;
 
       /* make UNC paths safe for CreateProcess -- backslash format */
       arg0 = argv[0];
@@ -1712,33 +1619,25 @@ start_job_command (struct child *child)
           for (i = 0; argv[i]; i++)
             fprintf (stderr, "%s ", argv[i]);
           fprintf (stderr, _("\nCounted %d args in failed launch\n"), i);
-          goto error;
+          child->pid = -1;
         }
   }
 #endif /* WINDOWS32 */
 #endif  /* __MSDOS__ or Amiga or WINDOWS32 */
 
   /* Bump the number of jobs started in this second.  */
-  ++job_counter;
+  if (child->pid >= 0)
+    ++job_counter;
 
-  /* We are the parent side.  Set the state to
-     say the commands are running and return.  */
-
+  /* Set the state to running.  */
   set_command_state (child->file, cs_running);
 
   /* Free the storage used by the child's argument list.  */
-#ifndef VMS
-  free (argv[0]);
-  free (argv);
-#endif
+  FREE_ARGV (argv);
 
   OUTPUT_UNSET();
-  return;
 
- error:
-  child->file->update_status = us_failed;
-  notice_finished_file (child->file);
-  OUTPUT_UNSET();
+#undef FREE_ARGV
 }
 
 /* Try to start a child running.
@@ -1761,7 +1660,7 @@ start_waiting_job (struct child *c)
   if (!c->remote
       && ((job_slots_used > 0 && load_too_high ())
 #ifdef WINDOWS32
-          || (process_used_slots () >= MAXIMUM_WAIT_OBJECTS)
+          || process_table_full ()
 #endif
           ))
     {
@@ -1780,12 +1679,17 @@ start_waiting_job (struct child *c)
     {
     case cs_running:
       c->next = children;
-      DB (DB_JOBS, (_("Putting child %p (%s) PID %s%s on the chain.\n"),
-                    c, c->file->name, pid2str (c->pid),
-                    c->remote ? _(" (remote)") : ""));
+      if (c->pid > 0)
+        {
+          DB (DB_JOBS, (_("Putting child %p (%s) PID %s%s on the chain.\n"),
+                        c, c->file->name, pid2str (c->pid),
+                        c->remote ? _(" (remote)") : ""));
+          /* One more job slot is in use.  */
+          ++job_slots_used;
+          assert (c->jobslot == 0);
+          c->jobslot = 1;
+        }
       children = c;
-      /* One more job slot is in use.  */
-      ++job_slots_used;
       unblock_sigs ();
       break;
 
@@ -1912,14 +1816,13 @@ new_job (struct file *file)
                         *out++ = *in++;
                       else
                         {
-                          /* Skip the backslash, newline and
-                             any following whitespace.  */
-                          in = next_token (in + 2);
+                          /* Skip the backslash, newline, and whitespace.  */
+                          in += 2;
+                          NEXT_TOKEN (in);
 
                           /* Discard any preceding whitespace that has
                              already been written to the output.  */
-                          while (out > outref
-                                 && isblank ((unsigned char)out[-1]))
+                          while (out > outref && ISBLANK (out[-1]))
                             --out;
 
                           /* Replace it all with a single space.  */
@@ -1943,10 +1846,12 @@ new_job (struct file *file)
         memmove (out, in, strlen (in) + 1);
 
       /* Finally, expand the line.  */
+      cmds->fileinfo.offset = i;
       lines[i] = allocated_variable_expand_for_file (cmds->command_lines[i],
                                                      file);
     }
 
+  cmds->fileinfo.offset = 0;
   c->command_lines = lines;
 
   /* Fetch the first command line to be run.  */
@@ -1972,18 +1877,10 @@ new_job (struct file *file)
      just once).  Also more thought needs to go into the entire algorithm;
      this is where the old parallel job code waits, so...  */
 
-#ifdef WINDOWS32
-  else if (has_jobserver_semaphore ())
-#else
-  else if (job_fds[0] >= 0)
-#endif
+  else if (jobserver_enabled ())
     while (1)
       {
         int got_token;
-#ifndef WINDOWS32
-        char token;
-        int saved_errno;
-#endif
 
         DB (DB_JOBS, ("Need a job token; we %shave children\n",
                       children ? "" : "don't "));
@@ -1992,36 +1889,8 @@ new_job (struct file *file)
         if (!jobserver_tokens)
           break;
 
-#ifndef WINDOWS32
-        /* Read a token.  As long as there's no token available we'll block.
-           We enable interruptible system calls before the read(2) so that if
-           we get a SIGCHLD while we're waiting, we'll return with EINTR and
-           we can process the death(s) and return tokens to the free pool.
-
-           Once we return from the read, we immediately reinstate restartable
-           system calls.  This allows us to not worry about checking for
-           EINTR on all the other system calls in the program.
-
-           There is one other twist: there is a span between the time
-           reap_children() does its last check for dead children and the time
-           the read(2) call is entered, below, where if a child dies we won't
-           notice.  This is extremely serious as it could cause us to
-           deadlock, given the right set of events.
-
-           To avoid this, we do the following: before we reap_children(), we
-           dup(2) the read FD on the jobserver pipe.  The read(2) call below
-           uses that new FD.  In the signal handler, we close that FD.  That
-           way, if a child dies during the section mentioned above, the
-           read(2) will be invoked with an invalid FD and will return
-           immediately with EBADF.  */
-
-        /* Make sure we have a dup'd FD.  */
-        if (job_rfd < 0)
-          {
-            DB (DB_JOBS, ("Duplicate the job FD\n"));
-            job_rfd = dup (job_fds[0]);
-          }
-#endif
+        /* Prepare for jobserver token acquisition.  */
+        jobserver_pre_acquire ();
 
         /* Reap anything that's currently waiting.  */
         reap_children (0, 0);
@@ -2030,8 +1899,7 @@ new_job (struct file *file)
            can run now (i.e., waiting for load). */
         start_waiting_jobs ();
 
-        /* If our "free" slot has become available, use it; we don't need an
-           actual token.  */
+        /* If our "free" slot is available, use it; we don't need a token.  */
         if (!jobserver_tokens)
           break;
 
@@ -2040,26 +1908,8 @@ new_job (struct file *file)
         if (!children)
           O (fatal, NILF, "INTERNAL: no children as we go to sleep on read\n");
 
-#ifdef WINDOWS32
-        /* On Windows we simply wait for the jobserver semaphore to become
-         * signalled or one of our child processes to terminate.
-         */
-        got_token = wait_for_semaphore_or_child_process ();
-        if (got_token < 0)
-          {
-            DWORD err = GetLastError ();
-            const char *estr = map_windows32_error_to_string (err);
-            ONS (fatal, NILF,
-                 _("semaphore or child process wait: (Error %ld: %s)"),
-                 err, estr);
-          }
-#else
-        /* Set interruptible system calls, and read() for a job token.  */
-        set_child_handler_action_flags (1, waiting_jobs != NULL);
-        got_token = read (job_rfd, &token, 1);
-        saved_errno = errno;
-        set_child_handler_action_flags (0, waiting_jobs != NULL);
-#endif
+        /* Get a token.  */
+        got_token = jobserver_acquire (waiting_jobs != NULL);
 
         /* If we got one, we're done here.  */
         if (got_token == 1)
@@ -2068,16 +1918,6 @@ new_job (struct file *file)
                           c, c->file->name));
             break;
           }
-
-#ifndef WINDOWS32
-        /* If the error _wasn't_ expected (EINTR or EBADF), punt.  Otherwise,
-           go back and reap_children(), and try again.  */
-        errno = saved_errno;
-        if (errno != EINTR && errno != EBADF)
-          pfatal_with_name (_("read jobs pipe"));
-        if (errno == EBADF)
-          DB (DB_JOBS, ("Read returned EBADF.\n"));
-#endif
       }
 #endif
 
@@ -2136,27 +1976,44 @@ job_next_command (struct child *child)
         {
           /* There are no more lines to be expanded.  */
           child->command_ptr = 0;
+          child->file->cmds->fileinfo.offset = 0;
           return 0;
         }
       else
         /* Get the next line to run.  */
         child->command_ptr = child->command_lines[child->command_line++];
     }
+
+  child->file->cmds->fileinfo.offset = child->command_line - 1;
   return 1;
 }
 
 /* Determine if the load average on the system is too high to start a new job.
-   The real system load average is only recomputed once a second.  However, a
-   very parallel make can easily start tens or even hundreds of jobs in a
-   second, which brings the system to its knees for a while until that first
-   batch of jobs clears out.
+
+   On systems which provide /proc/loadavg (e.g., Linux), we use an idea
+   provided by Sven C. Dack <sven.c.dack@sky.com>: retrieve the current number
+   of processes the kernel is running and, if it's greater than the requested
+   load we don't allow another job to start.  We allow a job to start with
+   equal processes since one of those will be for make itself, which will then
+   pause waiting for jobs to clear.
+
+   Otherwise, we obtain the system load average and compare that.
+
+   The system load average is only recomputed once every N (N>=1) seconds.
+   However, a very parallel make can easily start tens or even hundreds of
+   jobs in a second, which brings the system to its knees for a while until
+   that first batch of jobs clears out.
 
    To avoid this we use a weighted algorithm to try to account for jobs which
    have been started since the last second, and guess what the load average
    would be now if it were computed.
 
    This algorithm was provided by Thomas Riedl <thomas.riedl@siemens.com>,
-   who writes:
+   based on load average being recomputed once per second, which is
+   (apparently) how Solaris operates.  Linux recomputes only once every 5
+   seconds, but Linux is handled by the /proc/loadavg algorithm above.
+
+   Thomas writes:
 
 !      calculate something load-oid and add to the observed sys.load,
 !      so that latter can catch up:
@@ -2188,22 +2045,96 @@ job_next_command (struct child *child)
 static int
 load_too_high (void)
 {
-#if defined(__MSDOS__) || defined(VMS) || defined(_AMIGA) || defined(__riscos__)
+#if defined(__MSDOS__) || defined(VMS) || defined(_AMIGA) || defined(__riscos__) || defined(_GUARDIAN_TARGET)
   return 1;
 #else
   static double last_sec;
   static time_t last_now;
+
+  /* This is disabled by default for now, because it will behave badly if the
+     user gives a value > the number of cores; in that situation the load will
+     never be exceeded, this function always returns false, and we'll start
+     all the jobs.  Also, it's not quite right to limit jobs to the number of
+     cores not busy since a job takes some time to start etc.  Maybe that's
+     OK, I'm not sure exactly how to handle that, but for sure we need to
+     clamp this value at the number of cores before this can be enabled.
+   */
+#define PROC_FD_INIT -1
+  static int proc_fd = PROC_FD_INIT;
+
   double load, guess;
   time_t now;
 
 #ifdef WINDOWS32
-  /* sub_proc.c cannot wait for more than MAXIMUM_WAIT_OBJECTS children */
-  if (process_used_slots () >= MAXIMUM_WAIT_OBJECTS)
+  /* sub_proc.c is limited in the number of objects it can wait for. */
+  if (process_table_full ())
     return 1;
 #endif
 
   if (max_load_average < 0)
     return 0;
+
+  /* If we haven't tried to open /proc/loadavg, try now.  */
+#define LOADAVG "/proc/loadavg"
+  if (proc_fd == -2)
+    {
+      EINTRLOOP (proc_fd, open (LOADAVG, O_RDONLY));
+      if (proc_fd < 0)
+        DB (DB_JOBS, ("Using system load detection method.\n"));
+      else
+        {
+          DB (DB_JOBS, ("Using " LOADAVG " load detection method.\n"));
+          fd_noinherit (proc_fd);
+        }
+    }
+
+  /* Try to read /proc/loadavg if we managed to open it.  */
+  if (proc_fd >= 0)
+    {
+      int r;
+
+      EINTRLOOP (r, lseek (proc_fd, 0, SEEK_SET));
+      if (r >= 0)
+        {
+#define PROC_LOADAVG_SIZE 64
+          char avg[PROC_LOADAVG_SIZE+1];
+
+          EINTRLOOP (r, read (proc_fd, avg, PROC_LOADAVG_SIZE));
+          if (r >= 0)
+            {
+              const char *p;
+
+              /* The syntax of /proc/loadavg is:
+                    <1m> <5m> <15m> <running>/<total> <pid>
+                 The load is considered too high if there are more jobs
+                 running than the requested average.  */
+
+              avg[r] = '\0';
+              p = strchr (avg, ' ');
+              if (p)
+                p = strchr (p+1, ' ');
+              if (p)
+                p = strchr (p+1, ' ');
+
+              if (p && ISDIGIT(p[1]))
+                {
+                  int cnt = atoi (p+1);
+                  DB (DB_JOBS, ("Running: system = %d / make = %u (max requested = %f)\n",
+                                cnt, job_slots_used, max_load_average));
+                  return (double)cnt > max_load_average;
+                }
+
+              DB (DB_JOBS, ("Failed to parse " LOADAVG ": %s\n", avg));
+            }
+        }
+
+      /* If we got here, something went wrong.  Give up on this method.  */
+      if (r < 0)
+        DB (DB_JOBS, ("Failed to read " LOADAVG ": %s\n", strerror (errno)));
+
+      close (proc_fd);
+      proc_fd = -1;
+    }
 
   /* Find the real system load average.  */
   make_access ();
@@ -2280,117 +2211,300 @@ start_waiting_jobs (void)
 
 /* EMX: Start a child process. This function returns the new pid.  */
 # if defined __EMX__
-int
-child_execute_job (int stdin_fd, int stdout_fd, int stderr_fd,
-                   char **argv, char **envp)
+pid_t
+child_execute_job (struct childbase *child, int good_stdin, char **argv)
 {
-  int pid;
-  int save_stdin = -1;
-  int save_stdout = -1;
-  int save_stderr = -1;
+  pid_t pid;
+  int fdin = good_stdin ? FD_STDIN : get_bad_stdin ();
+  int fdout = FD_STDOUT;
+  int fderr = FD_STDERR;
+  int save_fdin = -1;
+  int save_fdout = -1;
+  int save_fderr = -1;
+
+  /* Divert child output if we want to capture output.  */
+  if (child->output.syncout)
+    {
+      if (child->output.out >= 0)
+        fdout = child->output.out;
+      if (child->output.err >= 0)
+        fderr = child->output.err;
+    }
 
   /* For each FD which needs to be redirected first make a dup of the standard
      FD to save and mark it close on exec so our child won't see it.  Then
      dup2() the standard FD to the redirect FD, and also mark the redirect FD
      as close on exec. */
-  if (stdin_fd != FD_STDIN)
+  if (fdin != FD_STDIN)
     {
-      save_stdin = dup (FD_STDIN);
-      if (save_stdin < 0)
+      save_fdin = dup (FD_STDIN);
+      if (save_fdin < 0)
         O (fatal, NILF, _("no more file handles: could not duplicate stdin\n"));
-      CLOSE_ON_EXEC (save_stdin);
+      fd_noinherit (save_fdin);
 
-      dup2 (stdin_fd, FD_STDIN);
-      CLOSE_ON_EXEC (stdin_fd);
+      dup2 (fdin, FD_STDIN);
+      fd_noinherit (fdin);
     }
 
-  if (stdout_fd != FD_STDOUT)
+  if (fdout != FD_STDOUT)
     {
-      save_stdout = dup (FD_STDOUT);
-      if (save_stdout < 0)
+      save_fdout = dup (FD_STDOUT);
+      if (save_fdout < 0)
         O (fatal, NILF,
            _("no more file handles: could not duplicate stdout\n"));
-      CLOSE_ON_EXEC (save_stdout);
+      fd_noinherit (save_fdout);
 
-      dup2 (stdout_fd, FD_STDOUT);
-      CLOSE_ON_EXEC (stdout_fd);
+      dup2 (fdout, FD_STDOUT);
+      fd_noinherit (fdout);
     }
 
-  if (stderr_fd != FD_STDERR)
+  if (fderr != FD_STDERR)
     {
-      if (stderr_fd != stdout_fd)
+      if (fderr != fdout)
         {
-          save_stderr = dup (FD_STDERR);
-          if (save_stderr < 0)
+          save_fderr = dup (FD_STDERR);
+          if (save_fderr < 0)
             O (fatal, NILF,
                _("no more file handles: could not duplicate stderr\n"));
-          CLOSE_ON_EXEC (save_stderr);
+          fd_noinherit (save_fderr);
         }
 
-      dup2 (stderr_fd, FD_STDERR);
-      CLOSE_ON_EXEC (stderr_fd);
+      dup2 (fderr, FD_STDERR);
+      fd_noinherit (fderr);
     }
 
   /* Run the command.  */
-  pid = exec_command (argv, envp);
+  pid = exec_command (argv, child->environment);
 
   /* Restore stdout/stdin/stderr of the parent and close temporary FDs.  */
-  if (save_stdin >= 0)
+  if (save_fdin >= 0)
     {
-      if (dup2 (save_stdin, FD_STDIN) != FD_STDIN)
+      if (dup2 (save_fdin, FD_STDIN) != FD_STDIN)
         O (fatal, NILF, _("Could not restore stdin\n"));
       else
-        close (save_stdin);
+        close (save_fdin);
     }
 
-  if (save_stdout >= 0)
+  if (save_fdout >= 0)
     {
-      if (dup2 (save_stdout, FD_STDOUT) != FD_STDOUT)
+      if (dup2 (save_fdout, FD_STDOUT) != FD_STDOUT)
         O (fatal, NILF, _("Could not restore stdout\n"));
       else
-        close (save_stdout);
+        close (save_fdout);
     }
 
-  if (save_stderr >= 0)
+  if (save_fderr >= 0)
     {
-      if (dup2 (save_stderr, FD_STDERR) != FD_STDERR)
+      if (dup2 (save_fderr, FD_STDERR) != FD_STDERR)
         O (fatal, NILF, _("Could not restore stderr\n"));
       else
-        close (save_stderr);
+        close (save_fderr);
     }
+
+  if (pid < 0)
+    OSS (error, NILF, "%s: %s", argv[0], strerror (errno));
 
   return pid;
 }
 
 #elif !defined (_AMIGA) && !defined (__MSDOS__) && !defined (VMS)
 
-/* UNIX:
-   Replace the current process with one executing the command in ARGV.
-   STDIN_FD/STDOUT_FD/STDERR_FD are used as the process's stdin/stdout/stderr;
-   ENVP is the environment of the new program.  This function does not return.  */
-void
-child_execute_job (int stdin_fd, int stdout_fd, int stderr_fd,
-                   char **argv, char **envp)
+/* POSIX:
+   Create a child process executing the command in ARGV.
+   Returns the PID or -1.  */
+pid_t
+child_execute_job (struct childbase *child, int good_stdin, char **argv)
 {
-  /* For any redirected FD, dup2() it to the standard FD then close it.  */
-  if (stdin_fd != FD_STDIN)
+#if defined _GUARDIAN_TARGET
+  const int fdin = FD_STDIN;
+#else
+  const int fdin = good_stdin ? FD_STDIN : get_bad_stdin ();
+#endif
+  int fdout = FD_STDOUT;
+  int fderr = FD_STDERR;
+  pid_t pid;
+  int r;
+#if defined(USE_POSIX_SPAWN)
+  char *cmd;
+  posix_spawnattr_t attr;
+  posix_spawn_file_actions_t fa;
+  short flags = 0;
+#endif
+
+  /* Divert child output if we want to capture it.  */
+  if (child->output.syncout)
     {
-      dup2 (stdin_fd, FD_STDIN);
-      close (stdin_fd);
+      if (child->output.out >= 0)
+        fdout = child->output.out;
+      if (child->output.err >= 0)
+        fderr = child->output.err;
     }
 
-  if (stdout_fd != FD_STDOUT)
-    dup2 (stdout_fd, FD_STDOUT);
-  if (stderr_fd != FD_STDERR)
-    dup2 (stderr_fd, FD_STDERR);
+#if !defined(USE_POSIX_SPAWN)
 
-  if (stdout_fd != FD_STDOUT)
-    close (stdout_fd);
-  if (stderr_fd != FD_STDERR && stderr_fd != stdout_fd)
-    close (stderr_fd);
+#ifndef _GUARDIAN_TARGET
+  pid = vfork();
+  if (pid != 0)
+    return pid;
+#else
+  pid = -1;
+#endif
+
+  /* We are the child.  */
+  unblock_all_sigs ();
+
+#ifdef SET_STACK_SIZE
+  /* Reset limits, if necessary.  */
+  if (stack_limit.rlim_cur)
+    setrlimit (RLIMIT_STACK, &stack_limit);
+#endif
+
+  /* For any redirected FD, dup2() it to the standard FD.
+     They are all marked close-on-exec already.  */
+  if (fdin >= 0 && fdin != FD_STDIN)
+    EINTRLOOP (r, dup2 (fdin, FD_STDIN));
+  if (fdout != FD_STDOUT)
+    EINTRLOOP (r, dup2 (fdout, FD_STDOUT));
+  if (fderr != FD_STDERR)
+    EINTRLOOP (r, dup2 (fderr, FD_STDERR));
 
   /* Run the command.  */
-  exec_command (argv, envp);
+  exec_command (argv, child->environment);
+
+#else /* USE_POSIX_SPAWN */
+
+  if ((r = posix_spawnattr_init (&attr)) != 0)
+    goto done;
+
+  if ((r = posix_spawn_file_actions_init (&fa)) != 0)
+    {
+      posix_spawnattr_destroy (&attr);
+      goto done;
+    }
+
+  /* Unblock all signals.  */
+#ifdef HAVE_POSIX_SPAWNATTR_SETSIGMASK
+  {
+    sigset_t mask;
+    sigemptyset (&mask);
+    r = posix_spawnattr_setsigmask (&attr, &mask);
+    if (r != 0)
+      goto cleanup;
+    flags |= POSIX_SPAWN_SETSIGMASK;
+  }
+#endif /* have posix_spawnattr_setsigmask() */
+
+  /* USEVFORK can give significant speedup on systems where it's available.  */
+#ifdef POSIX_SPAWN_USEVFORK
+  flags |= POSIX_SPAWN_USEVFORK;
+#endif
+
+  /* For any redirected FD, dup2() it to the standard FD.
+     They are all marked close-on-exec already.  */
+  if (fdin >= 0 && fdin != FD_STDIN)
+    if ((r = posix_spawn_file_actions_adddup2 (&fa, fdin, FD_STDIN)) != 0)
+      goto cleanup;
+  if (fdout != FD_STDOUT)
+    if ((r = posix_spawn_file_actions_adddup2 (&fa, fdout, FD_STDOUT)) != 0)
+      goto cleanup;
+  if (fderr != FD_STDERR)
+    if ((r = posix_spawn_file_actions_adddup2 (&fa, fderr, FD_STDERR)) != 0)
+      goto cleanup;
+
+  /* Be the user, permanently.  */
+  flags |= POSIX_SPAWN_RESETIDS;
+
+  /* Apply the spawn flags.  */
+  if ((r = posix_spawnattr_setflags (&attr, flags)) != 0)
+    goto cleanup;
+
+  /* Look up the program on the child's PATH, if needed.  */
+  {
+    const char *p = NULL;
+    char **pp;
+
+    for (pp = child->environment; *pp != NULL; ++pp)
+      if ((*pp)[0] == 'P' && (*pp)[1] == 'A' && (*pp)[2] == 'T'
+          && (*pp)[3] == 'H' &&(*pp)[4] == '=')
+        {
+          p = (*pp) + 5;
+          break;
+        }
+
+    /* execvp() will use a default PATH if none is set; emulate that.  */
+    if (p == NULL)
+      {
+        size_t l = confstr (_CS_PATH, NULL, 0);
+        if (l)
+          {
+            char *dp = alloca (l);
+            confstr (_CS_PATH, dp, l);
+            p = dp;
+          }
+      }
+
+    cmd = (char *)find_in_given_path (argv[0], p, 0);
+  }
+
+  if (!cmd)
+    {
+      r = errno;
+      goto cleanup;
+    }
+
+  /* Start the program.  */
+  while ((r = posix_spawn (&pid, cmd, &fa, &attr, argv,
+                           child->environment)) == EINTR)
+    ;
+
+  /* posix_spawn() doesn't provide sh fallback like exec() does; implement
+     it here.  POSIX doesn't specify the path to sh so use the default.  */
+
+  if (r == ENOEXEC)
+    {
+      char **nargv;
+      char **pp;
+      size_t l = 0;
+
+      for (pp = argv; *pp != NULL; ++pp)
+        ++l;
+
+      nargv = xmalloc (sizeof (char *) * (l + 3));
+      nargv[0] = (char *)default_shell;
+      nargv[1] = cmd;
+      memcpy (&nargv[2], &argv[1], sizeof (char *) * l);
+
+      while ((r = posix_spawn (&pid, nargv[0], &fa, &attr, nargv,
+                               child->environment)) == EINTR)
+        ;
+
+      free (nargv);
+    }
+
+  if (r == 0)
+    {
+      /* Spawn succeeded but may fail later: remember the command.  */
+      free (child->cmd_name);
+      if (cmd != argv[0])
+        child->cmd_name = cmd;
+      else
+        child->cmd_name = xstrdup(cmd);
+    }
+
+ cleanup:
+  posix_spawn_file_actions_destroy (&fa);
+  posix_spawnattr_destroy (&attr);
+
+ done:
+  if (r != 0)
+    pid = -1;
+
+#endif /* USE_POSIX_SPAWN */
+
+  if (pid < 0)
+    OSS (error, NILF, "%s: %s", argv[0], strerror (r));
+
+  return pid;
 }
 #endif /* !AMIGA && !__MSDOS__ && !VMS */
 #endif /* !WINDOWS32 */
@@ -2401,7 +2515,7 @@ child_execute_job (int stdin_fd, int stdout_fd, int stderr_fd,
 
 /* EMX: This function returns the pid of the child process.  */
 # ifdef __EMX__
-int
+pid_t
 # else
 void
 # endif
@@ -2414,7 +2528,7 @@ exec_command (char **argv, char **envp)
 #endif
   /* Run the program.  */
   execve (argv[0], argv, envp);
-  perror_with_name ("execve: ", argv[0]);
+  OSS (error, NILF, "%s: %s", argv[0], strerror (errno));
   _exit (EXIT_FAILURE);
 #else
 #ifdef WINDOWS32
@@ -2477,7 +2591,7 @@ exec_command (char **argv, char **envp)
 #else  /* !WINDOWS32 */
 
 # ifdef __EMX__
-  int pid;
+  pid_t pid;
 # endif
 
   /* Be the user, permanently.  */
@@ -2503,12 +2617,11 @@ exec_command (char **argv, char **envp)
   switch (errno)
     {
     case ENOENT:
-      OS (error, NILF, _("%s: Command not found"), argv[0]);
+      OSS (error, NILF, "%s: %s", argv[0], strerror (errno));
       break;
     case ENOEXEC:
       {
-        /* The file is not executable.  Try it as a shell script.  */
-        extern char *getenv ();
+        /* The file was not a program.  Try it as a shell script.  */
         const char *shell;
         char **new_argv;
         int argc;
@@ -2562,10 +2675,7 @@ exec_command (char **argv, char **envp)
 # else
         execvp (shell, new_argv);
 # endif
-        if (errno == ENOENT)
-          OS (error, NILF, _("%s: Shell program not found"), shell);
-        else
-          perror_with_name ("execvp: ", shell);
+        OSS (error, NILF, "%s: %s", new_argv[0], strerror (errno));
         break;
       }
 
@@ -2577,7 +2687,7 @@ exec_command (char **argv, char **envp)
 # endif
 
     default:
-      perror_with_name ("execvp: ", argv[0]);
+      OSS (error, NILF, "%s: %s", argv[0], strerror (errno));
       break;
     }
 
@@ -2663,7 +2773,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
     { "cd", "echo", "eval", "exec", "exit", "login", "logout", "set", "umask",
       "wait", "while", "for", "case", "if", ":", ".", "break", "continue",
       "export", "read", "readonly", "shift", "times", "trap", "switch",
-      "unset", "ulimit", 0 };
+      "unset", "ulimit", "command", 0 };
 
   const char *sh_chars;
   const char **sh_cmds;
@@ -2690,7 +2800,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
     { "echo", "cd", "eval", "exec", "exit", "login", "logout", "set", "umask",
       "wait", "while", "for", "case", "if", ":", ".", "break", "continue",
       "export", "read", "readonly", "shift", "times", "trap", "switch",
-      "unset", 0 };
+      "unset", "command", 0 };
 
   const char *sh_chars;
   const char **sh_cmds;
@@ -2700,7 +2810,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
   static const char *sh_cmds[] =
     { "cd", "eval", "if", "delete", "echo", "copy", "rename", "set", "setenv",
       "date", "makedir", "skip", "else", "endif", "path", "prompt", "unset",
-      "unsetenv", "version", 0 };
+      "unsetenv", "version", "command", 0 };
 
 #elif defined(_GUARDIAN_TARGET)
 
@@ -2712,7 +2822,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
   /* We used to have a double quote (") in sh_chars_dos[] below, but
      that caused any command line with quoted file names be run
      through a temporary batch file, which introduces command-line
-     limit of 4K charcaters imposed by cmd.exe.  Since CreateProcess
+     limit of 4K characters imposed by cmd.exe.  Since CreateProcess
      can handle quoted file names just fine, removing the quote lifts
      the limit from a very frequent use case, because using quoted
      file names is commonplace on MS-Windows.  */
@@ -2729,7 +2839,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
   static const char *sh_cmds_sh[] =
     { "cd", "eval", "exec", "exit", "login", "logout", "set", "umask", "wait",
       "while", "for", "case", "if", ":", ".", "break", "continue", "export",
-      "read", "readonly", "shift", "times", "trap", "switch", "test",
+      "read", "readonly", "shift", "times", "trap", "switch", "test", "command",
 #ifdef BATCH_MODE_ONLY_SHELL
       "echo",
 #endif
@@ -2743,10 +2853,11 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
 #else  /* must be UNIX-ish */
   static const char *sh_chars = "#;\"*?[]&|<>(){}$`^~!";
   static const char *sh_cmds[] =
-    { ".", ":", "break", "case", "cd", "continue", "eval", "exec", "exit",
-      "export", "for", "if", "login", "logout", "read", "readonly", "set",
-      "shift", "switch", "test", "times", "trap", "ulimit", "umask", "unset",
-      "wait", "while", 0 };
+    { ".", ":", "alias", "bg", "break", "case", "cd", "command", "continue",
+      "eval", "exec", "exit", "export", "fc", "fg", "for", "getopts", "hash",
+      "if", "jobs", "login", "logout", "read", "readonly", "return", "set",
+      "shift", "test", "times", "trap", "type", "ulimit", "umask", "unalias",
+      "unset", "wait", "while", 0 };
 
 # ifdef HAVE_DOS_PATHS
   /* This is required if the MSYS/Cygwin ports (which do not define
@@ -2756,7 +2867,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
   static const char *sh_chars_sh =  "#;\"*?[]&|<>(){}$`^~!";
 # endif  /* HAVE_DOS_PATHS */
 #endif
-  int i;
+  size_t i;
   char *p;
 #ifndef NDEBUG
   char *end;
@@ -2785,8 +2896,8 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
   if (restp != NULL)
     *restp = NULL;
 
-  /* Make sure not to bother processing an empty line.  */
-  while (isblank ((unsigned char)*line))
+  /* Make sure not to bother processing an empty line but stop at newline.  */
+  while (ISBLANK (*line))
     ++line;
   if (*line == '\0')
     return 0;
@@ -2920,6 +3031,10 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
           else if (instring == '"' && strchr ("\\$`", *p) != 0 && unixy_shell)
             goto slow;
 #ifdef WINDOWS32
+          /* Quoted wildcard characters must be passed quoted to the
+             command, so give up the fast route.  */
+          else if (instring == '"' && strchr ("*?", *p) != 0 && !unixy_shell)
+            goto slow;
           else if (instring == '"' && strncmp (p, "\\\"", 2) == 0)
             *ap++ = *++p;
 #endif
@@ -2965,15 +3080,16 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                 /* Throw out the backslash and newline.  */
                 ++p;
 
-                /* If there's nothing in this argument yet, skip any
-                   whitespace before the start of the next word.  */
+                /* At the beginning of the argument, skip any whitespace other
+                   than newline before the start of the next word.  */
                 if (ap == new_argv[i])
-                  p = next_token (p + 1) - 1;
+                  while (ISBLANK (p[1]))
+                    ++p;
               }
 #ifdef WINDOWS32
             /* Backslash before whitespace is not special if our shell
                is not Unixy.  */
-            else if (isspace (p[1]) && !unixy_shell)
+            else if (ISSPACE (p[1]) && !unixy_shell)
               {
                 *ap++ = *p;
                 break;
@@ -3000,7 +3116,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                 else
 #endif
                   if (p[1] != '\\' && p[1] != '\''
-                      && !isspace ((unsigned char)p[1])
+                      && !ISSPACE (p[1])
                       && strchr (sh_chars_sh, p[1]) == 0)
                     /* back up one notch, to copy the backslash */
                     --p;
@@ -3057,7 +3173,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                If so, have the shell handle it.  */
             if (i == 1)
               {
-                register int j;
+                int j;
                 for (j = 0; sh_cmds[j] != 0; ++j)
                   {
                     if (streq (sh_cmds[j], new_argv[0]))
@@ -3071,8 +3187,9 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                   }
               }
 
-            /* Ignore multiple whitespace chars.  */
-            p = next_token (p) - 1;
+            /* Skip whitespace chars, but not newlines.  */
+            while (ISBLANK (p[1]))
+              ++p;
             break;
 
           default:
@@ -3095,7 +3212,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
 
   if (i == 1)
     {
-      register int j;
+      int j;
       for (j = 0; sh_cmds[j] != 0; ++j)
         if (streq (sh_cmds[j], new_argv[0]))
           goto slow;
@@ -3165,8 +3282,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
    */
 
   /* Make sure not to bother processing an empty line.  */
-  while (isspace ((unsigned char)*line))
-    ++line;
+  NEXT_TOKEN (line);
   if (*line == '\0')
     return 0;
 #endif /* WINDOWS32 */
@@ -3178,9 +3294,9 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
        argument list.  */
 
     char *new_line;
-    unsigned int shell_len = strlen (shell);
-    unsigned int line_len = strlen (line);
-    unsigned int sflags_len = shellflags ? strlen (shellflags) : 0;
+    size_t shell_len = strlen (shell);
+    size_t line_len = strlen (line);
+    size_t sflags_len = shellflags ? strlen (shellflags) : 0;
 #ifdef WINDOWS32
     char *command_ptr = NULL; /* used for batch_mode_shell mode */
 #endif
@@ -3226,9 +3342,9 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
               {
                 int esc = 0;
 
-                /* This is the start of a new recipe line.
-                   Skip whitespace and prefix characters.  */
-                while (isblank (*f) || *f == '-' || *f == '@' || *f == '+')
+                /* This is the start of a new recipe line.  Skip whitespace
+                   and prefix characters but not newlines.  */
+                while (ISBLANK (*f) || *f == '-' || *f == '@' || *f == '+')
                   ++f;
 
                 /* Copy until we get to the next logical recipe line.  */
@@ -3278,21 +3394,21 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                [@+-]: they're meaningless in .ONESHELL mode.  */
             while (*f != '\0')
               {
-                /* This is the start of a new recipe line.
-                   Skip whitespace and prefix characters.  */
-                while (isblank (*f) || *f == '-' || *f == '@' || *f == '+')
+                /* This is the start of a new recipe line.  Skip whitespace
+                   and prefix characters but not newlines.  */
+                while (ISBLANK (*f) || *f == '-' || *f == '@' || *f == '+')
                   ++f;
 
                 /* Copy until we get to the next logical recipe line.  */
                 while (*f != '\0')
                   {
-                    /* Remove the escaped newlines in the command, and
-                       the whitespace that follows them.  Windows
-                       shells cannot handle escaped newlines.  */
+                    /* Remove the escaped newlines in the command, and the
+                       blanks that follow them.  Windows shells cannot handle
+                       escaped newlines.  */
                     if (*f == '\\' && f[1] == '\n')
                       {
                         f += 2;
-                        while (isblank (*f))
+                        while (ISBLANK (*f))
                           ++f;
                       }
                     *(t++) = *(f++);
@@ -3304,7 +3420,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
                 /* Write another line into the batch file.  */
                 if (t > tstart)
                   {
-                    int c = *t;
+                    char c = *t;
                     *t = '\0';
                     fputs (tstart, batch);
                     DB (DB_JOBS, ("\t%s", tstart));
@@ -3337,7 +3453,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
             {
               const char *s = shellflags;
               char *t;
-              unsigned int len;
+              size_t len;
               while ((t = find_next_token (&s, &len)) != 0)
                 new_argv[n++] = xstrndup (t, len);
             }
@@ -3404,7 +3520,7 @@ construct_command_argv_internal (char *line, char **restp, const char *shell,
         /* DOS shells don't know about backslash-escaping.  */
         if (unixy_shell && !batch_mode_shell &&
             (*p == '\\' || *p == '\'' || *p == '"'
-             || isspace ((unsigned char)*p)
+             || ISSPACE (*p)
              || strchr (sh_chars, *p) != 0))
           *ap++ = '\\';
 #ifdef __MSDOS__
@@ -3601,47 +3717,6 @@ construct_command_argv (char *line, char **restp, struct file *file,
   char *shell, *ifs, *shellflags;
   char **argv;
 
-#ifdef VMS
-  char *cptr;
-  int argc;
-
-  argc = 0;
-  cptr = line;
-  for (;;)
-    {
-      while ((*cptr != 0)
-             && (isspace ((unsigned char)*cptr)))
-        cptr++;
-      if (*cptr == 0)
-        break;
-      while ((*cptr != 0)
-             && (!isspace ((unsigned char)*cptr)))
-        cptr++;
-      argc++;
-    }
-
-  argv = xmalloc (argc * sizeof (char *));
-  if (argv == 0)
-    abort ();
-
-  cptr = line;
-  argc = 0;
-  for (;;)
-    {
-      while ((*cptr != 0)
-             && (isspace ((unsigned char)*cptr)))
-        cptr++;
-      if (*cptr == 0)
-        break;
-      DB (DB_JOBS, ("argv[%d] = [%s]\n", argc, cptr));
-      argv[argc++] = cptr;
-      while ((*cptr != 0)
-             && (!isspace ((unsigned char)*cptr)))
-        cptr++;
-      if (*cptr != 0)
-        *cptr++ = 0;
-    }
-#else
   {
     /* Turn off --warn-undefined-variables while we expand SHELL and IFS.  */
     int save = warn_undefined_variables_flag;
@@ -3716,7 +3791,7 @@ construct_command_argv (char *line, char **restp, struct file *file,
   free (shell);
   free (shellflags);
   free (ifs);
-#endif /* !VMS */
+
   return argv;
 }
 
@@ -3727,7 +3802,7 @@ dup2 (int old, int new)
   int fd;
 
   (void) close (new);
-  fd = dup (old);
+  EINTRLOOP (fd, dup (old));
   if (fd != new)
     {
       (void) close (fd);

@@ -1,27 +1,22 @@
-#ifdef __TANDEM
-#define NOLIST nolist
 #define _XOPEN_SOURCE
-#include <stdio.h> NOLIST
-#include <stdlib.h> NOLIST
-#include <string.h> NOLIST
-#include <time.h> NOLIST
-#ifdef _GUARDIAN_HOST
-#include <sysstat.h> NOLIST
-#else
-#include <sys/stat.h> NOLIST
-#endif
-#ifdef _GUARDIAN_HOST
-#pragma MAPINCLUDE "cextdecs.h" = "cextdecs"
-#pragma MAPINCLUDE "zsysc.h" = "zsysc"
-#endif
-#include <cextdecs.h(FILE_GETINFOLISTBYNAME_, INTERPRETTIMESTAMP)> NOLIST
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <cextdecs.h>
 #ifdef _OSS_HOST
-#include <zsysc> NOLIST
+#include <zsysc>
 #else
-#include <zsysc.h> NOLIST
+#include <zsysc.h>
 #endif
+#include <errno.h>
 
+#include "makeint.h"
 #include "debug.h"
+# define DDLDICT_SUPPRESS_EXTERNALIZATION_VERSION
+# define DDLDICT_EXTERN extern
+#include "ddldict.h"
 
 /* NSK version of UNIX getwd (similar to getcwd) */
 
@@ -46,9 +41,23 @@ int stat(const char *pathname, struct stat *st)
 
   rc = FILE_GETINFOLISTBYNAME_( pathname, (short) strlen(pathname), &infolist,
                                 1, (short *) &i64, sizeof( i64 ) );
+  if (rc == 11) {
+    open_ddldict_dll();
+    if (IS_DDLDICT_ENABLED && is_ddldict_func(pathname)) {
+      char dictpath[ZSYS_VAL_LEN_FILENAME+1];
+      strcpy(dictpath, pathname);
+      strcat(dictpath, "odf");
+      rc = FILE_GETINFOLISTBYNAME_( dictpath, (short) strlen(dictpath), &infolist,
+                                    1, (short *) &i64, sizeof( i64 ) );
+    }
+  }
   if (rc) {
     if (ISDB(DB_BASIC)) {
       printf("FILE_GETINFOLISTBYNAME_ %s failed, rc = %d\n", pathname, rc);
+    }
+    if (rc == 11) {
+      errno = ENOENT;
+      return ENOENT;
     }
     return -1;
   }
@@ -90,6 +99,10 @@ int stat(const char *pathname, struct stat *st)
     /* Returning will just result in showing the file timestamp in the debug */
     /* info and then having gmake say the file does not exist. */
     abort();
+  } else {
+	if (ISDB(DB_BASIC)) {
+	  printf("mktime AGGRMODIFY_LCT is %d\n", st->st_mtime);
+	}
   }
   st->st_dev   = 0;
   st->st_ino   = 0;
@@ -104,11 +117,8 @@ int stat(const char *pathname, struct stat *st)
 
   return rc ? -1 : 0;
 }
-#else
-static void noop(void) {}
-#endif
 /*===========================================================================*/
-#pragma page "T0593 GUARDIAN GNU Make- stanfunc Change Descriptions"
+#pragma page "T0593 GUARDIAN GNU Make- tandem_ext.c Change Descriptions"
 /*===========================================================================*/
 
 /*

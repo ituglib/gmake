@@ -1,5 +1,5 @@
 /* Interface to 'ar' archives for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 
 This file is part of GNU Make.
 
@@ -15,23 +15,26 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifdef __TANDEM
-#include <stdlib.h>
-#include <inttypes.h>
-#endif
-
 #include "makeint.h"
 
 #ifndef NO_ARCHIVES
 
 #include "filedef.h"
 #include "dep.h"
-#include <glob/fnmatch.h>
+#include <fnmatch.h>
 
 #if defined(_GUARDIAN_TARGET)
 # include <fcntl.h>
 # include <unistd.h>
+# include "debug.h"
+# define POBJ_SUPPRESS_EXTERNALIZATION_VERSION
+# include "pobj.h"
+# define COPYLIB_SUPPRESS_EXTERNALIZATION_VERSION
+# include "copylib.h"
+# define DDLDICT_SUPPRESS_EXTERNALIZATION_VERSION
+# include "ddldict.h"
 #endif
+
 /* Return nonzero if NAME is an archive-member reference, zero if not.  An
    archive-member reference is a name like 'lib(member)' where member is a
    non-empty string.
@@ -82,7 +85,7 @@ static long int
 ar_member_date_1 (int desc UNUSED, const char *mem, int truncated,
                   long int hdrpos UNUSED, long int datapos UNUSED,
                   long int size UNUSED, long int date,
-                  int uid UNUSED, int gid UNUSED, int mode UNUSED,
+                  int uid UNUSED, int gid UNUSED, unsigned int mode UNUSED,
                   const void *name)
 {
   return ar_name_equal (name, mem, truncated) ? date : 0;
@@ -116,6 +119,18 @@ ar_member_date (const char *name)
       (void) f_mtime (arfile, 0);
   }
 
+#if defined(_GUARDIAN_TARGET)
+  open_pobj_dll();
+  open_copylib_dll();
+  open_ddldict_dll();
+  if (IS_POBJ_ENABLED && is_pobj_func(arname))
+	val = pobj_scan_func (arname, pobj_member_date_1_func, memname);
+  else if (IS_COPYLIB_ENABLED && is_copylib_func(arname))
+	val = copylib_scan_func (arname, copylib_member_date_1_func, memname);
+  else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname))
+	val = ddldict_scan_func (arname, ddldict_member_date_1_func, memname);
+  else
+#endif
   val = ar_scan (arname, ar_member_date_1, memname);
 
   free (arname);
@@ -151,6 +166,16 @@ ar_touch (const char *name)
     arfile = enter_file (strcache_add (arname));
     f_mtime (arfile, 0);
 # ifdef _GUARDIAN_TARGET
+    open_pobj_dll();
+    open_copylib_dll();
+    open_ddldict_dll();
+   if (IS_POBJ_ENABLED && is_pobj_func(arname)) {
+
+    } else if (IS_COPYLIB_ENABLED && is_copylib_func(arname)) {
+
+    } else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname)) {
+
+    } else {
     if (!arfile->updated) {
       int fd;
       struct file *file = arfile;
@@ -193,11 +218,87 @@ ar_touch (const char *name)
           file->updated = 1;
         }
     }
+    }
 # endif
   }
 
   val = 1;
 
+#if defined(_GUARDIAN_TARGET)
+  open_pobj_dll();
+  open_copylib_dll();
+  open_ddldict_dll();
+  if (IS_POBJ_ENABLED && is_pobj_func(arname))
+  switch (pobj_member_touch_func (arname, memname))
+	{
+	case -1:
+	  OS (error, NILF, _("touch: POBJ '%s' does not exist"), arname);
+	  break;
+	case -2:
+	  OS (error, NILF, _("touch: '%s' is not a valid POBJ"), arname);
+	  break;
+	case -3:
+	  perror_with_name ("touch: ", arname);
+	  break;
+	case 1:
+	  OSS (error, NILF,
+		   _("touch: Requester '%s' does not exist in '%s'"), memname, arname);
+	  break;
+	case 0:
+	  val = 0;
+	  break;
+	default:
+	  OS (error, NILF,
+		  _("touch: Bad return code from pobj_member_touch on '%s'"), name);
+	}
+  else if (IS_COPYLIB_ENABLED && is_copylib_func(arname))
+  switch (copylib_member_touch_func (arname, memname))
+	{
+	case -1:
+	  OS (error, NILF, _("touch: COPYLIB '%s' does not exist"), arname);
+	  break;
+	case -2:
+	  OS (error, NILF, _("touch: '%s' is not a valid COPYLIB or is not set up with $(indexsection)"), arname);
+	  break;
+	case -3:
+	  perror_with_name ("touch: ", arname);
+	  break;
+	case 1:
+	  OSS (error, NILF,
+		   _("touch: Section '%s' does not exist in '%s'"), memname, arname);
+	  break;
+	case 0:
+	  val = 0;
+	  break;
+	default:
+	  OS (error, NILF,
+		  _("touch: Bad return code from copylib_member_touch on '%s'"), name);
+	}
+  else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname))
+  switch (ddldict_member_touch_func (arname, memname))
+	{
+	case -1:
+	  OS (error, NILF, _("touch: DDLDICT '%s' does not exist"), arname);
+	  break;
+	case -2:
+	  OS (error, NILF, _("touch: '%s' is not a valid DDLDICT or is not set up with $(indexsection)"), arname);
+	  break;
+	case -3:
+	  perror_with_name ("touch: ", arname);
+	  break;
+	case 1:
+	  OSS (error, NILF,
+		   _("touch: Section '%s' does not exist in '%s'"), memname, arname);
+	  break;
+	case 0:
+	  val = 0;
+	  break;
+	default:
+	  OS (error, NILF,
+		  _("touch: Bad return code from ddldict_member_touch on '%s'"), name);
+	}
+  else
+#endif
   switch (ar_member_touch (arname, memname))
     {
     case -1:
@@ -243,7 +344,7 @@ struct ar_glob_state
 #ifdef VMS
     char *suffix;
 #endif
-    unsigned int size;
+    size_t size;
     struct nameseq *chain;
     unsigned int n;
   };
@@ -255,7 +356,7 @@ static long int
 ar_glob_match (int desc UNUSED, const char *mem, int truncated UNUSED,
                long int hdrpos UNUSED, long int datapos UNUSED,
                long int size UNUSED, long int date UNUSED, int uid UNUSED,
-               int gid UNUSED, int mode UNUSED, const void *arg)
+               int gid UNUSED, unsigned int mode UNUSED, const void *arg)
 {
   struct ar_glob_state *state = (struct ar_glob_state *)arg;
 
@@ -281,7 +382,7 @@ ar_glob_match (int desc UNUSED, const char *mem, int truncated UNUSED,
 /* Return nonzero if PATTERN contains any metacharacters.
    Metacharacters can be quoted with backslashes if QUOTE is nonzero.  */
 static int
-glob_pattern_p (const char *pattern, int quote)
+ar_glob_pattern_p (const char *pattern, int quote)
 {
   const char *p;
   int opened = 0;
@@ -315,7 +416,7 @@ glob_pattern_p (const char *pattern, int quote)
    Return a malloc'd chain of matching elements (or nil if none).  */
 
 struct nameseq *
-ar_glob (const char *arname, const char *member_pattern, unsigned int size)
+ar_glob (const char *arname, const char *member_pattern, size_t size)
 {
   struct ar_glob_state state;
   struct nameseq *n;
@@ -324,7 +425,7 @@ ar_glob (const char *arname, const char *member_pattern, unsigned int size)
 #ifdef VMS
   char *vms_member_pattern;
 #endif
-  if (! glob_pattern_p (member_pattern, 1))
+  if (! ar_glob_pattern_p (member_pattern, 1))
     return 0;
 
   /* Scan the archive for matches.
@@ -351,6 +452,18 @@ ar_glob (const char *arname, const char *member_pattern, unsigned int size)
   state.chain = 0;
   state.n = 0;
 
+#if defined(_GUARDIAN_TARGET)
+  open_pobj_dll();
+  open_copylib_dll();
+  open_ddldict_dll();
+  if (IS_POBJ_ENABLED && is_pobj_func(arname))
+  pobj_scan_func (arname, pobj_glob_match_func, &state);
+  else if (IS_COPYLIB_ENABLED && is_copylib_func(arname))
+  copylib_scan_func (arname, copylib_glob_match_func, &state);
+  else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname))
+  ddldict_scan_func (arname, ddldict_glob_match_func, &state);
+  else
+#endif
   ar_scan (arname, ar_glob_match, &state);
 
 #ifdef VMS
