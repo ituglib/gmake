@@ -1,5 +1,5 @@
 /* Implicit rule searching for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -66,14 +66,13 @@ try_implicit_rule (struct file *file, unsigned int depth)
    length of the word.  */
 
 static const char *
-get_next_word (const char *buffer, unsigned int *length)
+get_next_word (const char *buffer, size_t *length)
 {
   const char *p = buffer, *beg;
   char c;
 
   /* Skip any leading whitespace.  */
-  while (isblank ((unsigned char)*p))
-    ++p;
+  NEXT_TOKEN (p);
 
   beg = p;
   c = *(p++);
@@ -153,6 +152,7 @@ struct patdeps
     const char *pattern;
     struct file *file;
     unsigned int ignore_mtime : 1;
+    unsigned int ignore_automatic_vars : 1;
   };
 
 /* This structure stores information about pattern rules that we need
@@ -162,11 +162,11 @@ struct tryrule
   {
     struct rule *rule;
 
+    /* Stem length for this match. */
+    size_t stemlen;
+
     /* Index of the target in this rule that matched the file. */
     unsigned int matches;
-
-    /* Stem length for this match. */
-    unsigned int stemlen;
 
     /* Definition order of this rule. Used to implement stable sort.*/
     unsigned int order;
@@ -180,8 +180,8 @@ stemlen_compare (const void *v1, const void *v2)
 {
   const struct tryrule *r1 = v1;
   const struct tryrule *r2 = v2;
-  int r = r1->stemlen - r2->stemlen;
-  return r != 0 ? r : (int)(r1->order - r2->order);
+  int r = (int) (r1->stemlen - r2->stemlen);
+  return r != 0 ? r : (int) (r1->order - r2->order);
 }
 
 /* Search the pattern rules for a rule with an existing dependency to make
@@ -206,7 +206,7 @@ pattern_search (struct file *file, int archive,
   const char *filename = archive ? strchr (file->name, '(') : file->name;
 
   /* Length of FILENAME.  */
-  unsigned int namelen = strlen (filename);
+  size_t namelen = strlen (filename);
 
   /* The last slash in FILENAME (or nil if there is none).  */
   const char *lastslash;
@@ -221,13 +221,14 @@ pattern_search (struct file *file, int archive,
   struct patdeps *deplist = xmalloc (max_deps * sizeof (struct patdeps));
   struct patdeps *pat = deplist;
 
-  /* Names of possible dependencies are constructed in this buffer.  */
-  char *depname = alloca (namelen + max_pattern_dep_length);
+  /* Names of possible dependencies are constructed in this buffer.
+     We may replace % by $(*F) for second expansion, increasing the length.  */
+  char *depname = alloca (namelen + max_pattern_dep_length + 4);
 
   /* The start and length of the stem of FILENAME for the current rule.  */
   const char *stem = 0;
-  unsigned int stemlen = 0;
-  unsigned int fullstemlen = 0;
+  size_t stemlen = 0;
+  size_t fullstemlen = 0;
 
   /* Buffer in which we store all the rules that are possibly applicable.  */
   struct tryrule *tryrules = xmalloc (num_pattern_rules * max_pattern_targets
@@ -253,7 +254,7 @@ pattern_search (struct file *file, int archive,
   struct rule *rule;
 
   char *pathdir = NULL;
-  unsigned long pathlen;
+  size_t pathlen;
 
   PATH_VAR (stem_str); /* @@ Need to get rid of stem, stemlen, etc. */
 
@@ -266,29 +267,29 @@ pattern_search (struct file *file, int archive,
       /* Set LASTSLASH to point at the last slash in FILENAME
          but not counting any slash at the end.  (foo/bar/ counts as
          bar/ in directory foo/, not empty in directory foo/bar/.)  */
+      lastslash = memrchr (filename, '/', namelen - 1);
 #ifdef VMS
-      lastslash = strrchr (filename, ']');
-      if (lastslash == 0)
+      if (lastslash == NULL)
+        lastslash = strrchr (filename, ']');
+      if (lastslash == NULL)
+        lastslash = strrchr (filename, '>');
+      if (lastslash == NULL)
         lastslash = strrchr (filename, ':');
-#else
-      lastslash = strrchr (filename, '/');
+#endif
 #ifdef HAVE_DOS_PATHS
       /* Handle backslashes (possibly mixed with forward slashes)
          and the case of "d:file".  */
       {
-        char *bslash = strrchr (filename, '\\');
+        char *bslash = memrchr (filename, '\\', namelen - 1);
         if (lastslash == 0 || bslash > lastslash)
           lastslash = bslash;
         if (lastslash == 0 && filename[0] && filename[1] == ':')
           lastslash = filename + 1;
       }
 #endif
-#endif
-      if (lastslash != 0 && lastslash[1] == '\0')
-        lastslash = 0;
     }
 
-  pathlen = lastslash - filename + 1;
+  pathlen = lastslash ? lastslash - filename + 1 : 0;
 
   /* First see which pattern rules match this target and may be considered.
      Put them in TRYRULES.  */
@@ -315,7 +316,7 @@ pattern_search (struct file *file, int archive,
         {
           const char *target = rule->targets[ti];
           const char *suffix = rule->suffixes[ti];
-          int check_lastslash;
+          char check_lastslash;
 
           /* Rules that can match any filename and are not terminal
              are ignored if we're recursing, so that they cannot be
@@ -339,10 +340,10 @@ pattern_search (struct file *file, int archive,
           if (lastslash)
             {
 #ifdef VMS
-              check_lastslash = (strchr (target, ']') == 0
-                                 && strchr (target, ':') == 0);
+              check_lastslash = strpbrk (target, "/]>:") == NULL;
 #else
               check_lastslash = strchr (target, '/') == 0;
+#endif
 #ifdef HAVE_DOS_PATHS
               /* Didn't find it yet: check for DOS-type directories.  */
               if (check_lastslash)
@@ -350,7 +351,6 @@ pattern_search (struct file *file, int archive,
                   char *b = strchr (target, '\\');
                   check_lastslash = !(b || (target[0] && target[1] == ':'));
                 }
-#endif
 #endif
             }
           if (check_lastslash)
@@ -437,13 +437,12 @@ pattern_search (struct file *file, int archive,
       for (ri = 0; ri < nrules; ri++)
         {
           struct dep *dep;
-          int check_lastslash;
+          char check_lastslash;
           unsigned int failed = 0;
           int file_variables_set = 0;
           unsigned int deps_found = 0;
           /* NPTR points to the part of the prereq we haven't processed.  */
           const char *nptr = 0;
-          const char *dir = NULL;
           int order_only = 0;
           unsigned int matches;
 
@@ -478,12 +477,12 @@ pattern_search (struct file *file, int archive,
                   memcpy (pathdir, filename, pathlen);
                   pathdir[pathlen] = '\0';
                 }
-              dir = pathdir;
             }
 
-          if (stemlen > GET_PATH_MAX)
+          if (stemlen + (check_lastslash ? pathlen : 0) > GET_PATH_MAX)
             {
-              DBS (DB_IMPLICIT, (_("Stem too long: '%.*s'.\n"),
+              DBS (DB_IMPLICIT, (_("Stem too long: '%s%.*s'.\n"),
+                                 check_lastslash ? pathdir : "",
                                  (int) stemlen, stem));
               continue;
             }
@@ -491,8 +490,19 @@ pattern_search (struct file *file, int archive,
           DBS (DB_IMPLICIT, (_("Trying pattern rule with stem '%.*s'.\n"),
                              (int) stemlen, stem));
 
-          strncpy (stem_str, stem, stemlen);
-          stem_str[stemlen] = '\0';
+          if (!check_lastslash)
+            {
+              memcpy (stem_str, stem, stemlen);
+              stem_str[stemlen] = '\0';
+            }
+          else
+            {
+              /* We want to prepend the directory from
+                 the original FILENAME onto the stem.  */
+              memcpy (stem_str, filename, pathlen);
+              memcpy (stem_str + pathlen, stem, stemlen);
+              stem_str[pathlen + stemlen] = '\0';
+            }
 
           /* If there are no prerequisites, then this rule matches.  */
           if (rule->deps == 0)
@@ -543,18 +553,19 @@ pattern_search (struct file *file, int archive,
                         }
                       memcpy (o, nptr, p - nptr);
                       o += p - nptr;
-                      memcpy (o, stem_str, stemlen);
+                      memcpy (o, stem, stemlen);
                       o += stemlen;
                       strcpy (o, p + 1);
                     }
 
                   /* Parse the expanded string.  It might have wildcards.  */
                   p = depname;
-                  dl = PARSE_SIMPLE_SEQ (&p, struct dep);
+                  dl = PARSE_FILE_SEQ (&p, struct dep, MAP_NUL, NULL, PARSEFS_ONEWORD);
                   for (d = dl; d != NULL; d = d->next)
                     {
                       ++deps_found;
                       d->ignore_mtime = dep->ignore_mtime;
+                      d->ignore_automatic_vars = dep->ignore_automatic_vars;
                     }
 
                   /* We've used up this dep, so next time get a new one.  */
@@ -573,7 +584,7 @@ pattern_search (struct file *file, int archive,
               else
                 {
                   int add_dir = 0;
-                  unsigned int len;
+                  size_t len;
                   struct dep **dptr;
 
                   nptr = get_next_word (nptr, &len);
@@ -594,10 +605,10 @@ pattern_search (struct file *file, int archive,
                      again.  This is not good if you have certain characters
                      in your stem (like $).
 
-                     Instead, we will replace % with $* and allow the second
-                     expansion to take care of it for us.  This way (since $*
-                     is a simple variable) there won't be additional
-                     re-expansion of the stem.  */
+                     Instead, we will replace % with $* or $(*F) and allow the
+                     second expansion to take care of it for us.  This way
+                     (since $* and $(*F) are simple variables) there won't be
+                     additional re-expansion of the stem.  */
 
                   p = lindex (nptr, nptr + len, '%');
                   if (p == 0)
@@ -607,14 +618,23 @@ pattern_search (struct file *file, int archive,
                     }
                   else
                     {
-                      unsigned int i = p - nptr;
-                      memcpy (depname, nptr, i);
-                      memcpy (depname + i, "$*", 2);
-                      memcpy (depname + i + 2, p + 1, len - i - 1);
-                      depname[len + 2 - 1] = '\0';
-
+                      size_t i = p - nptr;
+                      char *o = depname;
+                      memcpy (o, nptr, i);
+                      o += i;
                       if (check_lastslash)
-                        add_dir = 1;
+                        {
+                          add_dir = 1;
+                          memcpy (o, "$(*F)", 5);
+                          o += 5;
+                        }
+                      else
+                        {
+                          memcpy (o, "$*", 2);
+                          o += 2;
+                        }
+                      memcpy (o, p + 1, len - i - 1);
+                      o[len - i - 1] = '\0';
                     }
 
                   /* Set up for the next word.  */
@@ -646,7 +666,7 @@ pattern_search (struct file *file, int archive,
                       /* Parse the expanded string. */
                       struct dep *dp = PARSE_FILE_SEQ (&p, struct dep,
                                                        order_only ? MAP_NUL : MAP_PIPE,
-                                                       add_dir ? dir : NULL, PARSEFS_NONE);
+                                                       add_dir ? pathdir : NULL, PARSEFS_NONE);
                       *dptr = dp;
 
                       for (d = dp; d != NULL; d = d->next)
@@ -672,7 +692,7 @@ pattern_search (struct file *file, int archive,
 
               if (deps_found > max_deps)
                 {
-                  unsigned int l = pat - deplist;
+                  size_t l = pat - deplist;
                   /* This might have changed due to recursion.  */
                   max_pattern_deps = MAX(max_pattern_deps, deps_found);
                   max_deps = max_pattern_deps;
@@ -705,6 +725,7 @@ pattern_search (struct file *file, int archive,
 
                   memset (pat, '\0', sizeof (struct patdeps));
                   pat->ignore_mtime = d->ignore_mtime;
+                  pat->ignore_automatic_vars = d->ignore_automatic_vars;
 
                   DBS (DB_IMPLICIT,
                        (is_rule
@@ -863,9 +884,10 @@ pattern_search (struct file *file, int archive,
 
           /* We don't want to delete an intermediate file that happened
              to be a prerequisite of some (other) target. Mark it as
-             precious.  */
+             secondary.  We don't want it to be precious as that disables
+             DELETE_ON_ERROR etc.  */
           if (f != 0)
-            f->precious = 1;
+            f->secondary = 1;
           else
             f = enter_file (imf->name);
 
@@ -894,6 +916,7 @@ pattern_search (struct file *file, int archive,
 
       dep = alloc_dep ();
       dep->ignore_mtime = pat->ignore_mtime;
+      dep->ignore_automatic_vars = pat->ignore_automatic_vars;
       s = strcache_add (pat->name);
       if (recursions)
         dep->name = s;
@@ -930,17 +953,13 @@ pattern_search (struct file *file, int archive,
     }
   else
     {
-      int dirlen = (lastslash + 1) - filename;
-      char *sp;
-
       /* We want to prepend the directory from
          the original FILENAME onto the stem.  */
-      fullstemlen = dirlen + stemlen;
-      sp = alloca (fullstemlen + 1);
-      memcpy (sp, filename, dirlen);
-      memcpy (sp + dirlen, stem, stemlen);
-      sp[fullstemlen] = '\0';
-      file->stem = strcache_add (sp);
+      fullstemlen = pathlen + stemlen;
+      memcpy (stem_str, filename, pathlen);
+      memcpy (stem_str + pathlen, stem, stemlen);
+      stem_str[fullstemlen] = '\0';
+      file->stem = strcache_add (stem_str);
     }
 
   file->cmds = rule->cmds;

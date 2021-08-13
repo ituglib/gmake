@@ -1,5 +1,5 @@
 /* Template for the remote job exportation interface to GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -53,7 +53,7 @@ start_remote_job_p (int first_p UNUSED)
 
 int
 start_remote_job (char **argv UNUSED, char **envp UNUSED, int stdin_fd UNUSED,
-                  int *is_remote UNUSED, int *id_ptr UNUSED,
+                  int *is_remote UNUSED, pid_t *id_ptr UNUSED,
                   int *used_stdin UNUSED)
 {
   return -1;
@@ -93,7 +93,7 @@ unblock_remote_children (void)
 
 /* Send signal SIG to child ID.  Return 0 if successful, -1 if not.  */
 int
-remote_kill (int id UNUSED, int sig UNUSED)
+remote_kill (pid_t id UNUSED, int sig UNUSED)
 {
   return -1;
 }

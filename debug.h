@@ -1,5 +1,5 @@
 /* Debugging macros and interface.
-Copyright (C) 1999-2014 Free Software Foundation, Inc.
+Copyright (C) 1999-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -27,6 +27,8 @@ extern int db_level;
 
 #define ISDB(_l)    ((_l)&db_level)
 
+/* When adding macros to this list be sure to update the value of
+   XGETTEXT_OPTIONS in the po/Makevars file.  */
 #define DBS(_l,_x)  do{ if(ISDB(_l)) {print_spaces (depth); \
                                       printf _x; fflush (stdout);} }while(0)
 

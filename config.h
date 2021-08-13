@@ -1,5 +1,5 @@
-/* config.h.  Generated automatically by configure.  */
-/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+/* config.h.  Generated from config.h.in by configure.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if the `closedir' function returns void instead of `int'. */
 /* #undef CLOSEDIR_VOID */
@@ -8,6 +8,9 @@
    systems. This function is required for `alloca.c' support on those systems.
    */
 /* #undef CRAY_STACKSEG_END */
+
+/* Define to 1 if you have `config.h'. */
+#define HAVE_CONFIG_H 1
 
 /* Define to 1 if using `alloca.c'. */
 #define C_ALLOCA 1
@@ -308,74 +311,25 @@
 /* Define to 1 if you have the 'union wait' type in <sys/wait.h>. */
 /* #undef HAVE_UNION_WAIT */
 
+/* Define to 1 if you have umask */
+#define HAVE_UMASK 1
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
 /* Define to 1 if you have the `wait3' function. */
 /* #undef HAVE_WAIT3 */
 
-/* Define if you have the waitpid function.  */
+/* Define to 1 if you have the `waitpid' function. */
 #define HAVE_WAITPID 1
 
-/* Define if you have the <dirent.h> header file.  */
-#define HAVE_DIRENT_H 1
-
-/* Define if you have the <fcntl.h> header file.  */
-#define HAVE_FCNTL_H 1
-
-/* Define if you have the <limits.h> header file.  */
-#define HAVE_LIMITS_H 1
-
-/* Define if you have the <mach/mach.h> header file.  */
-/* #undef HAVE_MACH_MACH_H */
-
-/* Define if you have the <memory.h> header file.  */
-#define HAVE_MEMORY_H 1
-
-/* Define if you have the <ndir.h> header file.  */
-/* #undef HAVE_NDIR_H */
-
-/* Define if you have the <string.h> header file.  */
-#define HAVE_STRING_H 1
-
-/* Define if you have the <sys/dir.h> header file.  */
-/* #undef HAVE_SYS_DIR_H */
-
-/* Define if you have the <sys/ndir.h> header file.  */
-/* #undef HAVE_SYS_NDIR_H */
-
-/* Define if you have the <sys/param.h> header file.  */
-#define HAVE_SYS_PARAM_H 1
-
-/* Define if you have the <sys/timeb.h> header file.  */
-/* #undef HAVE_SYS_TIMEB_H */
-
-/* Define if you have the <sys/wait.h> header file.  */
-#define HAVE_SYS_WAIT_H 1
-
-/* Define if you have the <unistd.h> header file.  */
-#define HAVE_UNISTD_H 1
-
-/* Define if you have the dgc library (-ldgc).  */
-/* #undef HAVE_LIBDGC */
-
-/* Define if you have the kstat library (-lkstat).  */
-/* #undef HAVE_LIBKSTAT */
-
-/* Define if you have the sun library (-lsun).  */
-/* #undef HAVE_LIBSUN */
-
-/* Name of package */
-#define PACKAGE "make"
-
-/* Version number of package */
-#define VERSION "4.1g5"
-
 /* Build host information. */
-#ifdef _TNS_E_TARGET
-#define MAKE_HOST "nse-tandem-nsk"
+#if defined (_TNS_E_TARGET)
+# define MAKE_HOST "nse-tandem-nsk"
+#elif defined (_TNS_X_TARGET)
+# define MAKE_HOST "nsx-tandem-nsk"
 #else
-#define MAKE_HOST "nsx-tandem-nsk"
+# define MAKE_HOST "unknown-tandem-nsk"
 #endif
 
 /* Define to 1 to enable job server support in GNU make. */
@@ -394,3 +348,135 @@
 /* Define to 1 if struct nlist.n_name is a pointer rather than an array. */
 #define NLIST_STRUCT 1
 
+/* Name of package */
+#define PACKAGE "make"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "support@nexbridge.com"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "GNU make TNS/E"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "GNU make 4.3g1 TNS/E"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "make"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL "http://www.gnu.org/software/make/"
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "4.3g1"
+
+/* Define to the character that separates directories in PATH. */
+#define PATH_SEPARATOR_CHAR ':'
+
+/* Define as the return type of signal handlers (`int' or `void'). */
+#define RETSIGTYPE void
+
+/* Define to the name of the SCCS 'get' command. */
+#define SCCS_GET "get"
+
+/* Define to 1 if the SCCS 'get' command understands the '-G<file>' option. */
+/* #undef SCCS_GET_MINUS_G */
+
+/* If using the C implementation of alloca, define if you know the
+   direction of stack growth for your system; otherwise it will be
+   automatically deduced at runtime.
+	STACK_DIRECTION > 0 => grows toward higher addresses
+	STACK_DIRECTION < 0 => grows toward lower addresses
+	STACK_DIRECTION = 0 => direction of growth unknown */
+#define STACK_DIRECTION -1
+
+/* Define to 1 if the `S_IS*' macros in <sys/stat.h> do not work properly. */
+/* #undef STAT_MACROS_BROKEN */
+
+/* Define to 1 if you have the ANSI C header files. */
+#define STDC_HEADERS 1
+
+/* Define if struct stat contains a nanoseconds field */
+/* #undef ST_MTIM_NSEC */
+
+/* Define to 1 on System V Release 4. */
+/* #undef SVR4 */
+
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#define TIME_WITH_SYS_TIME 1
+
+/* Define to 1 for Encore UMAX. */
+/* #undef UMAX */
+
+/* Define to 1 for Encore UMAX 4.3 that has <inq_status/cpustats.h> instead of
+   <sys/cpustats.h>. */
+/* #undef UMAX4_3 */
+
+/* Enable extensions on AIX 3, Interix.  */
+#ifndef _ALL_SOURCE
+# define _ALL_SOURCE 1
+#endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
+/* Enable threading extensions on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# define _POSIX_PTHREAD_SEMANTICS 1
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+# define _TANDEM_SOURCE 1
+#endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# define __EXTENSIONS__ 1
+#endif
+
+
+/* Version number of package */
+#define VERSION "4.3g1"
+
+/* Use platform specific coding */
+/* #undef WINDOWS32 */
+
+/* Define if using the dmalloc debugging malloc package */
+/* #undef WITH_DMALLOC */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+/* #undef _FILE_OFFSET_BITS */
+
+/* Define for large files, on AIX-style hosts. */
+/* #undef _LARGE_FILES */
+
+/* Define to 1 if on MINIX. */
+/* #undef _MINIX */
+
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+/* #undef _POSIX_1_SOURCE */
+
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+/* #undef _POSIX_SOURCE */
+
+/* Define to empty if `const' does not conform to ANSI C. */
+/* #undef const */
+
+/* Define to `int' if <sys/types.h> doesn't define. */
+/* #undef gid_t */
+
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef pid_t */
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* #undef size_t */
+
+/* Define to `int' if <sys/types.h> doesn't define. */
+/* #undef uid_t */
+
+/* Define uintmax_t if not defined in <stdint.h> or <inttypes.h>. */
+/* #undef uintmax_t */

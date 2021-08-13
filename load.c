@@ -1,5 +1,5 @@
 /* Loading dynamic objects for GNU Make.
-Copyright (C) 2012-2014 Free Software Foundation, Inc.
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -45,8 +45,8 @@ struct load_list
 static struct load_list *loaded_syms = NULL;
 
 static load_func_t
-load_object (const gmk_floc *flocp, int noerror,
-             const char *ldname, const char *symname)
+load_object (const floc *flocp, int noerror, const char *ldname,
+             const char *symname)
 {
   static void *global_dl = NULL;
   load_func_t symp;
@@ -119,9 +119,9 @@ load_object (const gmk_floc *flocp, int noerror,
 }
 
 int
-load_file (const gmk_floc *flocp, const char **ldname, int noerror)
+load_file (const floc *flocp, const char **ldname, int noerror)
 {
-  int nmlen = strlen (*ldname);
+  size_t nmlen = strlen (*ldname);
   char *new = alloca (nmlen + CSTRLEN (SYMBOL_EXTENSION) + 1);
   char *symname = NULL;
   char *loaded;
@@ -142,7 +142,7 @@ load_file (const gmk_floc *flocp, const char **ldname, int noerror)
       ep = strchr (fp+1, ')');
       if (ep && ep[1] == '\0')
         {
-          int l = fp - *ldname;;
+          size_t l = fp - *ldname;;
 
           ++fp;
           if (fp == ep)
@@ -168,9 +168,8 @@ load_file (const gmk_floc *flocp, const char **ldname, int noerror)
   loaded = allocated_variable_expand ("$(.LOADED)");
   fp = strstr (loaded, *ldname);
   r = fp && (fp==loaded || fp[-1]==' ') && (fp[nmlen]=='\0' || fp[nmlen]==' ');
-  free (loaded);
   if (r)
-    return 1;
+    goto exit;
 
   /* If we didn't find a symbol name yet, construct it from the ldname.  */
   if (! symname)
@@ -196,7 +195,7 @@ load_file (const gmk_floc *flocp, const char **ldname, int noerror)
         fp = *ldname;
       else
         ++fp;
-      while (isalnum (*fp) || *fp == '_')
+      while (isalnum ((unsigned char) *fp) || *fp == '_')
         *(p++) = *(fp++);
       strcpy (p, SYMBOL_EXTENSION);
       symname = new;
@@ -214,8 +213,21 @@ load_file (const gmk_floc *flocp, const char **ldname, int noerror)
 
   /* If it succeeded, add the load file to the loaded variable.  */
   if (r > 0)
-    do_variable_definition (flocp, ".LOADED", *ldname, o_default, f_append, 0);
+    {
+      size_t loadlen = strlen (loaded);
+      char *newval = alloca (loadlen + strlen (*ldname) + 2);
+      /* Don't add a space if it's empty.  */
+      if (loadlen)
+        {
+          memcpy (newval, loaded, loadlen);
+          newval[loadlen++] = ' ';
+        }
+      strcpy (&newval[loadlen], *ldname);
+      do_variable_definition (flocp, ".LOADED", newval, o_default, f_simple, 0);
+    }
 
+ exit:
+  free (loaded);
   return r;
 }
 
@@ -228,7 +240,7 @@ unload_file (const char *name)
     if (streq (d->name, name) && d->dlp)
       {
         if (dlclose (d->dlp))
-          perror_with_name ("dlclose", d->name);
+          perror_with_name ("dlclose: ", d->name);
         d->dlp = NULL;
         break;
       }
@@ -237,7 +249,7 @@ unload_file (const char *name)
 #else
 
 int
-load_file (const gmk_floc *flocp, const char **ldname, int noerror)
+load_file (const floc *flocp, const char **ldname UNUSED, int noerror)
 {
   if (! noerror)
     O (fatal, flocp,
@@ -247,7 +259,7 @@ load_file (const gmk_floc *flocp, const char **ldname, int noerror)
 }
 
 void
-unload_file (const char *name)
+unload_file (const char *name UNUSED)
 {
   O (fatal, NILF, "INTERNAL: Cannot unload when load is not supported!");
 }

@@ -1,4 +1,60 @@
-*.o
+# Development artifacts
+ID
+TAGS
+.*gdbinit
+.gdb_history
+*~
+#*
+.#*
+
+# Configure artifacts
+ABOUT-NLS
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache
+config.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+stamp-h1
+
+# Build artifacts
+adding .deps because we cannot generate them on NonStop
+gmk-default.h
+loadavg
+make
 gmake
-gmake.exe
-ZLDAF*
+*.dll
+gmakeext
+gmakepdl
+gmakeddl
+gmaken
+*.o
+*.a
+docs
+
+# Distribution artifacts
+.dep_segment
+.check-git-HEAD
+ChangeLog
+Makefile.DOS
+NMakefile
+README
+README.DOS
+README.OS2
+README.W32
+SMakefile
+build.sh
+build.sh.in
+config.ami
+config.h-vms
+config.h.W32
+configh.dos
+make-[0-9]*/
+make-[0-9]*.tar.*
+checkcfg.*.log
+/GMaken - GNU Make GUARDIAN Nexbridge Port Manual.md.html
+/GMaken - GNU Make GUARDIAN Nexbridge Port Manual.md_files/

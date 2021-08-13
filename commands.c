@@ -1,5 +1,5 @@
 /* Command processing for GNU Make.
-Copyright (C) 1988-2014 Free Software Foundation, Inc.
+Copyright (C) 1988-2020 Free Software Foundation, Inc.
 This file is part of GNU Make.
 
 GNU Make is free software; you can redistribute it and/or modify it under the
@@ -27,19 +27,16 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef _GUARDIAN_TARGET
 #include <cextdecs.h>
-#include <unistd.h>
 #endif
 
 #if VMS
-# define FILE_LIST_SEPARATOR ','
+# define FILE_LIST_SEPARATOR (vms_comma_separator ? ',' : ' ')
 #else
 # define FILE_LIST_SEPARATOR ' '
 #endif
 
-int remote_kill (int id, int sig);
-
 #ifndef HAVE_UNISTD_H
-int getpid ();
+pid_t getpid ();
 #endif
 
 
@@ -79,7 +76,7 @@ set_file_variables (struct file *file)
 
   if (ar_name (file->name))
     {
-      unsigned int len;
+      size_t len;
       const char *cp;
       char *p;
 
@@ -108,7 +105,7 @@ set_file_variables (struct file *file)
          any suffix in the .SUFFIXES list stripped off for
          explicit rules.  We store this in the 'stem' member.  */
       const char *name;
-      unsigned int len;
+      size_t len;
 
 #ifndef NO_ARCHIVES
       if (ar_name (file->name))
@@ -125,7 +122,7 @@ set_file_variables (struct file *file)
 
       for (d = enter_file (strcache_add (".SUFFIXES"))->deps; d ; d = d->next)
         {
-          unsigned int slen = strlen (dep_name (d));
+          size_t slen = strlen (dep_name (d));
           if (len > slen && strneq (dep_name (d), name + (len - slen), slen))
             {
               file->stem = strcache_add_len (name, len - slen);
@@ -140,14 +137,14 @@ set_file_variables (struct file *file)
   /* $< is the first not order-only dependency.  */
   less = "";
   for (d = file->deps; d != 0; d = d->next)
-    if (!d->ignore_mtime)
+    if (!d->ignore_mtime && !d->ignore_automatic_vars)
       {
         if (!d->need_2nd_expansion)
           less = dep_name (d);
         break;
       }
 
-  if (file->cmds == default_file->cmds)
+  if (file->cmds != 0 && file->cmds == default_file->cmds)
     /* This file got its commands from .DEFAULT.
        In this case $< is the same as $@.  */
     less = at;
@@ -166,14 +163,14 @@ set_file_variables (struct file *file)
 
   {
     static char *plus_value=0, *bar_value=0, *qmark_value=0;
-    static unsigned int plus_max=0, bar_max=0, qmark_max=0;
+    static size_t plus_max=0, bar_max=0, qmark_max=0;
 
-    unsigned int qmark_len, plus_len, bar_len;
+    size_t qmark_len, plus_len, bar_len;
     char *cp;
     char *caret_value;
     char *qp;
     char *bp;
-    unsigned int len;
+    size_t len;
 
     struct hash_table dep_hash;
     void **slot;
@@ -185,7 +182,7 @@ set_file_variables (struct file *file)
     bar_len = 0;
     for (d = file->deps; d != 0; d = d->next)
       {
-        if (!d->need_2nd_expansion)
+        if (!d->need_2nd_expansion && !d->ignore_automatic_vars)
           {
             if (d->ignore_mtime)
               bar_len += strlen (dep_name (d)) + 1;
@@ -207,7 +204,7 @@ set_file_variables (struct file *file)
 
     qmark_len = plus_len + 1;   /* Will be this or less.  */
     for (d = file->deps; d != 0; d = d->next)
-      if (! d->ignore_mtime && ! d->need_2nd_expansion)
+      if (! d->ignore_mtime && ! d->need_2nd_expansion && ! d->ignore_automatic_vars)
         {
           const char *c = dep_name (d);
 
@@ -254,7 +251,7 @@ set_file_variables (struct file *file)
 
     for (d = file->deps; d != 0; d = d->next)
       {
-        if (d->need_2nd_expansion)
+        if (d->need_2nd_expansion || d->ignore_automatic_vars)
           continue;
 
         slot = hash_find_slot (&dep_hash, d);
@@ -276,7 +273,7 @@ set_file_variables (struct file *file)
       {
         const char *c;
 
-        if (d->need_2nd_expansion || hash_find_item (&dep_hash, d) != d)
+        if (d->need_2nd_expansion || d->ignore_automatic_vars || hash_find_item (&dep_hash, d) != d)
           continue;
 
         c = dep_name (d);
@@ -333,7 +330,8 @@ set_file_variables (struct file *file)
 void
 chop_commands (struct commands *cmds)
 {
-  unsigned int nlines, idx;
+  unsigned int nlines;
+  unsigned short idx;
   char **lines;
 
   /* If we don't have any commands,
@@ -346,7 +344,7 @@ chop_commands (struct commands *cmds)
 
   if (one_shell)
     {
-      int l = strlen (cmds->commands);
+      size_t l = strlen (cmds->commands);
 
       nlines = 1;
       lines = xmalloc (nlines * sizeof (char *));
@@ -389,7 +387,7 @@ chop_commands (struct commands *cmds)
               nlines += 2;
               lines = xrealloc (lines, nlines * sizeof (char *));
             }
-          lines[idx++] = xstrndup (p, end - p);
+          lines[idx++] = xstrndup (p, (size_t) (end - p));
           p = end;
           if (*p != '\0')
             ++p;
@@ -408,7 +406,7 @@ chop_commands (struct commands *cmds)
   if (nlines > USHRT_MAX)
     ON (fatal, &cmds->fileinfo, _("Recipe has too many lines (%ud)"), nlines);
 
-  cmds->ncommand_lines = nlines;
+  cmds->ncommand_lines = (unsigned short)nlines;
   cmds->command_lines = lines;
 
   cmds->any_recurse = 0;
@@ -416,10 +414,10 @@ chop_commands (struct commands *cmds)
 
   for (idx = 0; idx < nlines; ++idx)
     {
-      int flags = 0;
+      unsigned char flags = 0;
       const char *p = lines[idx];
 
-      while (isblank (*p) || *p == '-' || *p == '@' || *p == '+')
+      while (ISBLANK (*p) || *p == '-' || *p == '@' || *p == '+')
         switch (*(p++))
           {
           case '+':
@@ -456,7 +454,7 @@ execute_file_commands (struct file *file)
      the commands are nothing but whitespace.  */
 
   for (p = file->cmds->commands; *p != '\0'; ++p)
-    if (!isspace ((unsigned char)*p) && *p != '-' && *p != '@')
+    if (!ISSPACE (*p) && *p != '-' && *p != '@' && *p != '+')
       break;
   if (*p == '\0')
     {
@@ -514,7 +512,7 @@ fatal_error_signal (int sig)
 #ifdef WINDOWS32
   extern HANDLE main_thread;
 
-  /* Windows creates a sperate thread for handling Ctrl+C, so we need
+  /* Windows creates a separate thread for handling Ctrl+C, so we need
      to suspend the main thread, or else we will have race conditions
      when both threads call reap_children.  */
   if (main_thread)
@@ -545,10 +543,11 @@ fatal_error_signal (int sig)
     {
       struct child *c;
       for (c = children; c != 0; c = c->next)
-        if (!c->remote) {
+        {
 #ifdef _GUARDIAN_TARGET
-        	// FIXME: Implement PROCESS_STOP_ using CPU/PIN in c->pid
+       	// FIXME: Implement PROCESS_STOP_ using CPU/PIN in c->pid
 #else
+        if (!c->remote && c->pid > 0)
             (void) kill (c->pid, SIGTERM);
 #endif
         }
@@ -571,7 +570,7 @@ fatal_error_signal (int sig)
       /* Remote children won't automatically get signals sent
          to the process group, so we must send them.  */
       for (c = children; c != 0; c = c->next)
-        if (c->remote)
+        if (c->remote && c->pid > 0)
           (void) remote_kill (c->pid, sig);
 
       for (c = children; c != 0; c = c->next)
@@ -676,7 +675,7 @@ delete_child_targets (struct child *child)
 {
   struct dep *d;
 
-  if (child->deleted)
+  if (child->deleted || child->pid < 0)
     return;
 
   /* Delete the target file if it changed.  */
