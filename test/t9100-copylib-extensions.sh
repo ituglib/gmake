@@ -8,7 +8,11 @@ test_description='Test copylib extensions
 
 . ./test-lib.sh
 
-test_expect_success 'simple copylib compile' '
+test_lazy_prereq COPYDLL '
+	test -f `dirname $PRODUCT_BUILD`/gmakecpy
+'
+
+test_expect_success COPYDLL 'simple copylib compile' '
 	edit_loader makefile <<-EOF > /dev/null &&
 dq!a
 a
@@ -23,7 +27,7 @@ prefix:
         \$(VAR)
 
 obj: src copylib(a) copy2(c)
-        \$(CC) /IN \$<,OUT =SPOOL/ \$@
+        \$(CC) /IN \$<,OUT =SPOOL,TERM \$NULL/ \$@
 //
 EOF
 	edit_loader src <<-EOF > /dev/null &&
@@ -74,19 +78,19 @@ EOF
 	launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.C /IN src,OUT =SPOOL/ obj
+	\$SYSTEM.SYSTEM.C /IN src,OUT =SPOOL,TERM \$NULL/ obj
 	EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'retest compile - should not run' '
+test_expect_success COPYDLL 'retest compile - should not run' '
 	launch_make > capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": Nothing to be done for ${QUOTE}all${QUOTE}." >expecting &&
 	test_cmp expecting actual
 '
 
-test_expect_success 'recompile - changed copy2 section C' '
+test_expect_success COPYDLL 'recompile - changed copy2 section C' '
 	edit_loader copy2 <<-EOF > /dev/null &&
 a
 
@@ -96,12 +100,12 @@ EOF
 	launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.C /IN src,OUT =SPOOL/ obj
+	\$SYSTEM.SYSTEM.C /IN src,OUT =SPOOL,TERM \$NULL/ obj
 	EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'copylib member touch' '
+test_expect_success COPYDLL 'copylib member touch' '
 	edit_loader makefile <<-EOF > /dev/null &&
 dq!a
 a
@@ -109,7 +113,7 @@ a
 \$(indexsection copy2 copy2t)
 
 copylib(a): src2
-        \$(EDIT) /in src2/
+        \$(EDIT) /in src2,TERM \$NULL/
 //
 EOF
 	edit_loader src2 <<-EOF > /dev/null &&
@@ -131,7 +135,7 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'retest compile after touch - should not run' '
+test_expect_success COPYDLL 'retest compile after touch - should not run' '
 	launch_make > capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": ${QUOTE}copylib(a)${QUOTE} is up to date." >expecting &&

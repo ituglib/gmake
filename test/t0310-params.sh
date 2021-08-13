@@ -15,7 +15,7 @@ a
 \$(param P1)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -40,7 +40,7 @@ a
 
 obj1: src1
         PARAM p1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -65,7 +65,7 @@ a
 \$(param P1 "Hello)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -89,7 +89,7 @@ dq!a
 a
 obj1: src1 
         PARAM P1 "Hello
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -114,7 +114,7 @@ a
 \$(param swapvol \$NOVALID)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -143,7 +143,7 @@ dq!a
 a
 obj1: src1 
         param swapvol \$NOVALID
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -176,7 +176,7 @@ a
 \$(clear_param p2)
 \$(param swapvol \$SYSTEM)
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -213,9 +213,10 @@ obj1: src1
         param p2 Hello
         clear param p2
         param swapvol \$SYSTEM
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -250,9 +251,10 @@ a
 \$(clear_param p2)
 \$(clear_param *)
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -288,9 +290,10 @@ obj1: src1
         param p2 Hello
         clear param p2
         clear param all
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a

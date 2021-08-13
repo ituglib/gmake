@@ -14,7 +14,7 @@ a
 SHELLOUT=\$(shell #OUTPUT ABV)
 .PHONY: always
 always:
-        \$(TAL)/IN makeSRC1/;DEFINE SPR=\$(SHELLOUT)
+        \$(TAL)/IN makeSRC1,TERM \$NULL/;DEFINE SPR=\$(SHELLOUT)
 //
 EOF
 	edit_loader makesrc1 <<-EOF &&
@@ -30,7 +30,7 @@ EOF
 	launch_make --legacy-cc > capture &&
 	fgrep ABV < capture | sed "s/^  *//g" > actual &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.TAL/IN makeSRC1/;DEFINE SPR=ABV
+	\$SYSTEM.SYSTEM.TAL/IN makeSRC1,TERM \$NULL/;DEFINE SPR=ABV
 	EOF
 	test_cmp expecting actual
 '

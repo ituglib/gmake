@@ -12,7 +12,7 @@ test_expect_success 'TAL compile, always builds' '
 	edit_loader makefile <<-EOF &&
 a
 all:
-        \$(TAL)/IN A/OBJ1
+        \$(TAL)/IN A,TERM \$NULL/OBJ1
 //
 EOF
 	edit_loader a <<-EOF &&
@@ -36,7 +36,7 @@ a
 all: obj1
 
 obj1: a
-        \$(TAL)/IN A/OBJ1
+        \$(TAL)/IN A,TERM \$NULL/OBJ1
 //
 EOF
 	launch_make

@@ -30,8 +30,8 @@ pipeline {
             steps {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib']) {
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS"
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=/G/data27/jenkmake/gmake"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSX.OSS"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSX.OSS GMAKE_EXE=/G/data27/jenkmake/gmake"
                 }
             }
         }
@@ -47,7 +47,7 @@ pipeline {
             steps {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib']) {
-                    sh '/usr/coreutils/bin/make -k test TEST_LINT= SHELL=/usr/coreutils/bin/bash || echo "GMake Test FAILURE"'
+                    sh '/usr/coreutils/bin/make -C test TEST_LINT= SHELL=/usr/coreutils/bin/bash'
                 }
             }
         }
@@ -57,7 +57,7 @@ pipeline {
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
                         'DEST=/G/data27/jenkins']) {
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=${DEST}/gmake"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSX.OSS GMAKE_EXE=${DEST}/gmake"
                 }
             }
         }

@@ -15,7 +15,7 @@ a
 \$(assign ssv0)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -39,9 +39,10 @@ dq!a
 a
 obj1: src1 
         assign ssv0
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -64,9 +65,10 @@ a
 \$(assign ssv0,)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -88,9 +90,10 @@ dq!a
 a
 obj1: src1 
         assign ssv0,
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -114,9 +117,10 @@ a
 \$(assign SSV1,\$SYSTEM.SYSTEM)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -145,9 +149,10 @@ a
 obj1: src1 
         assign SSV0,\$A.B
         assign SSV1,\$SYSTEM.SYSTEM
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -177,9 +182,10 @@ a
 \$(assign SSV0,\$SYSTEM.SYSTEM)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -208,9 +214,10 @@ a
 obj1: src1 
         assign SSV1,\$A.B
         assign SSV0,\$SYSTEM.SYSTEM
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -242,9 +249,10 @@ a
 \$(assign SSV0,\$SYSTEM.SYSTEM)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -279,9 +287,10 @@ obj1: src1
         assign SSV1,\$SYSTEM.SYSTEM
         clear assign all
         assign SSV0,\$SYSTEM.SYSTEM
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -316,9 +325,10 @@ a
 \$(clear_assign SSV0)
 
 obj1: src1 
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a
@@ -349,9 +359,10 @@ obj1: src1
         assign SSV0,\$A.B
         assign SSV1,\$SYSTEM.SYSTEM
         clear assign SSV0
-        \$(TAL)/IN \$</ obj1
+        \$(TAL)/IN \$<,TERM \$NULL/ obj1
 //
 EOF
+	sleep 5 &&
 	edit_loader src1 <<-EOF &&
 dq!a
 a

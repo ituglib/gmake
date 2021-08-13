@@ -8,7 +8,11 @@ test_description='Test POBJ extensions
 
 . ./test-lib.sh
 
-test_expect_success 'simple pobj compile' '
+test_lazy_prereq POBJDLL '
+	test -f `dirname $PRODUCT_BUILD`/gmakeext
+'
+
+test_expect_success POBJDLL 'simple pobj compile' '
 	edit_loader makefile <<-EOF > /dev/null &&
 dq!a
 a
@@ -18,7 +22,7 @@ a
 all: pobjdir(nsgreqs)
 
 pobjdir(nsgreqs): nsgreqs
-        \$(SCOBOLX)/IN \$<,OUT =SPOOL/pobj
+        \$(SCOBOLX)/IN \$<,OUT =SPOOL,TERM \$NULL/pobj
 //
 EOF
 	edit_loader nsgreqs <<-EOF > /dev/null &&
@@ -71,14 +75,14 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'retest compile - should not run' '
+test_expect_success POBJDLL 'retest compile - should not run' '
 	launch_make > capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": Nothing to be done for ${QUOTE}all${QUOTE}." >expecting &&
 	test_cmp expecting actual
 '
 
-test_expect_success 'recompile - changed source' '
+test_expect_success POBJDLL 'recompile - changed source' '
 	edit_loader nsgreqs <<-EOF > /dev/null &&
 a
 
@@ -88,12 +92,12 @@ EOF
 	launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.SCOBOLX/IN nsgreqs,OUT =SPOOL/pobj
+	\$SYSTEM.SYSTEM.SCOBOLX/IN nsgreqs,OUT =SPOOL,TERM \$NULL/pobj
 	EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'pobj member touch' '
+test_expect_success POBJDLL 'pobj member touch' '
 	edit_loader nsgreqs <<-EOF > /dev/null &&
 a
 
@@ -106,7 +110,7 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'retest compile after touch - should not run' '
+test_expect_success POBJDLL 'retest compile after touch - should not run' '
 	launch_make > capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": Nothing to be done for ${QUOTE}all${QUOTE}." >expecting &&

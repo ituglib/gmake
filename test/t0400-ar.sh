@@ -13,9 +13,9 @@ test_expect_success 'simple ar operation' '
 a
 all: a(obj)
 obj: src
-        \$(TAL)/IN SRC/OBJ
+        \$(TAL)/IN SRC,TERM \$NULL/OBJ
 a(obj): obj
-        \$(AR) \$(ARFLAGS) \$@ \$<
+        \$(AR)/IN \$NULL,TERM \$NULL,OUT \$NULL/ \$(ARFLAGS) \$@ \$<
 //
 EOF
 	edit_loader src <<-EOF &&
@@ -45,12 +45,13 @@ dq!a
 a
 all: a(obj)
 obj: src
-        \$(TAL)/IN SRC/OBJ
+        \$(TAL)/IN SRC,TERM \$NULL/OBJ
 a(obj): obj
         \$(delay 10 seconds)
-        \$(AR) \$(ARFLAGS) \$@ \$<
+        \$(AR)/IN \$NULL,TERM \$NULL,OUT \$NULL/ \$(ARFLAGS) \$@ \$<
 //
 EOF
+	sleep 2 &&
 	edit_loader src <<-EOF &&
 a
 

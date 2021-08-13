@@ -486,6 +486,7 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	char buf[2048], cbuf[LINE_MAX], cmd[48];
 	char filename3[ZSYS_VAL_LEN_FILENAME], *bptr, *cptr;
 	char *s1ptr = NULL, *s2ptr = NULL, hometerm[48], inoutfilename[48];
+	char sethometerm[48];
 	char *sepptr = NULL, process_name[ZSYS_VAL_LEN_PROCESSNAME + 1];
 	char *nextptr = NULL;
 	char separators[] = " ,/";
@@ -834,6 +835,38 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 					memcpy(smt->outfile.whole, filename3,
 							sizeof(smt->outfile.whole));
 				}
+			} else if (!strncasecmp(bptr, "TERM", strlen("TERM"))) {
+				out_found = 1;
+				/*
+				 * If (1) no more separators or (2) separator has been
+				 * nulled out or (3) a separator immediately follows
+				 * this string, then we have no outfile name.
+				 */
+				if ((sepptr == NULL) || (*sepptr == '\0')
+						|| (strspn(bptr + strlen(bptr) + 1, ",/"))) {
+					if (ISDB(DB_BASIC))
+						printf("launch_proc not setting term name\n");
+				} else {
+					/* in inlen out */
+					bptr = strtok(NULL, separators);
+
+					if (ISDB(DB_BASIC))
+						printf("launch_proc term = '%s' at 0x%x\n", bptr,
+								bptr);
+					/* need to add node if remote pgm */
+					if (remotepgm) {
+						rc = FILENAME_DECOMPOSE_(bptr, (short) strlen(bptr),
+								sethometerm, sizeof(sethometerm), &size1,
+								-1, 1);
+						if (rc) {
+							printf("launch_proc FILENAME_DECOMPOSE_ failed\n");
+							return PROCDEATH_PREMATURE;
+						}
+						sethometerm[size1] = NULL;
+					} else {
+						strcpy(sethometerm, bptr);
+					}
+				}
 			} else if (!strncasecmp(bptr, "CPU", strlen("CPU"))) {
 				bptr = strtok(NULL, separators);
 
@@ -968,6 +1001,8 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			ZSYS_VAL_PCREATOPT_DEFOVERRIDE;
 	plist.program_name = cmd;
 	plist.program_name_len = (long) strlen(cmd);
+	plist.hometerm_name = sethometerm;
+	plist.hometerm_name_len = (long) strlen(sethometerm);
 	error = PROCESS_LAUNCH_((void *) &plist, &errordet, (void *) &olist,
 			sizeof(olist), &olistlen);
 	if (error) {
