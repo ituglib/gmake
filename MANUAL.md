@@ -317,6 +317,7 @@ are all optional:
 | ------- | ---------------- | ---------------------------------------------------------------------------- |
 |   `IN`  | file            | The file to be used as an input file to the program. This is generally used. |
 |  `OUT`  | file or spooler | The file or location to be used to capture output. This is optional.         |
+| `TERM`  | file            | The file to be used as an home terminal to the program. This is optional.    |
 |  `CPU`  | number          | The CPU on which the program will be run.                                    |
 | `NAME`  | pname           | The name of the process to be run.                                           |
 | `DEBUG` |                 | Causes the program to be started in DEBUG mode.                              |

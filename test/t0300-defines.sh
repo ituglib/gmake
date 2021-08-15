@@ -16,7 +16,7 @@ a
 \$(define_add =SRC,map,SRC14)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC/=OBJ
+        \$(TAL)/IN =SRC,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src14 <<-EOF &&
@@ -45,7 +45,7 @@ a
 \$(define_delete =BOB)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC/=OBJ
+        \$(TAL)/IN =SRC,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src16 <<-EOF &&
@@ -72,8 +72,8 @@ a
 \$(define_add =CAT1,catalog,THISSV)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC/=OBJ
-        -\$(SQLCOMP)/IN =OBJ,OUT COMP18/CATALOG =CAT1
+        \$(TAL)/IN =SRC,TERM \$NULL/=OBJ
+        -\$(SQLCOMP)/IN =OBJ,OUT COMP18,TERM \$NULL/CATALOG =CAT1
 //
 EOF
 	edit_loader src18 <<-EOF &&
@@ -106,8 +106,8 @@ a
 \$(define_add =CAT1,catalog,THATSV)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC/=OBJ
-        -\$(SQLCOMP)/IN =OBJ,OUT COMP19/CATALOG =CAT1
+        \$(TAL)/IN =SRC,TERM \$NULL/=OBJ
+        -\$(SQLCOMP)/IN =OBJ,OUT COMP19,TERM \$NULL/CATALOG =CAT1
 //
 EOF
 	edit_loader src19 <<-EOF &&
@@ -139,7 +139,7 @@ a
 \$(define_add =SPOOL,spool,\$s.#t0300)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC,OUT =SPOOL/=OBJ
+        \$(TAL)/IN =SRC,OUT =SPOOL,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src20 <<-EOF &&
@@ -176,7 +176,7 @@ a
 \$(define_add =SPOOL,spool,\$s.#t0300,copies=4)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC,OUT =SPOOL/=OBJ
+        \$(TAL)/IN =SRC,OUT =SPOOL,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src21 <<-EOF &&
@@ -213,7 +213,7 @@ a
 \$(define_add =SPOOL,spool,\$s.#t0300,report=nothing)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC,OUT =SPOOL/=OBJ
+        \$(TAL)/IN =SRC,OUT =SPOOL,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src22 <<-EOF &&
@@ -250,7 +250,7 @@ a
 \$(define_add =SPOOL,spool,\$s.#t0300,report=nothing,copies=2)
 .PHONY: always
 always:
-        \$(TAL)/IN =SRC,OUT =SPOOL/=OBJ
+        \$(TAL)/IN =SRC,OUT =SPOOL,TERM \$NULL/=OBJ
 //
 EOF
 	edit_loader src23 <<-EOF &&
@@ -285,7 +285,7 @@ a
 \$(define_add =srch1,search,subvol=a)
 .PHONY: always
 always:
-        \$(TACL)/IN MAC1,OUT TACL1/
+        \$(TACL)/IN MAC1,OUT TACL1,TERM \$NULL/
 //
 EOF
 	edit_loader mac1 <<-EOF &&
@@ -314,7 +314,7 @@ a
 \$(define_add =srch1,search,subvol=a,relsubvol=b,subvol=c,relsubvol=d)
 .PHONY: always
 always:
-        \$(TACL)/IN MAC2,OUT TACL2/
+        \$(TACL)/IN MAC2,OUT TACL2,TERM \$NULL/
 //
 EOF
 	edit_loader mac2 <<-EOF &&

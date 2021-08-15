@@ -174,7 +174,7 @@ fi
 
 # Add libc MALLOC and MALLOC_PERTURB test
 # only if we are not executing the test with valgrind
-if expr " $GIT_TEST_OPTS " : ".* --valgrind " >/dev/null ||
+if expr " $GMAKE_TEST_OPTS " : ".* --valgrind " >/dev/null ||
    test -n "$TEST_NO_MALLOC_CHECK"
 then
 	setup_malloc_check () {

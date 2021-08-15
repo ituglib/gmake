@@ -8,6 +8,18 @@ test_description='Tandem warning handling
 
 . ./test-lib.sh
 
+case `uname -r` in
+J*)
+	CCOMPILER='$SYSTEM.SYSTEM.NMC'
+	;;
+L*)
+	CCOMPILER='$SYSTEM.SYSTEM.CCOMP'
+	;;
+*)
+	test_failure
+	;;
+esac
+
 test_expect_success 'simple DDL compile' '
 	edit_loader makefile <<-EOF > /dev/null &&
 dq!a
@@ -18,7 +30,7 @@ a
 all: cout
 
 cout: ddlsrc
-        \$(DDL) /IN \$<,OUT =SPOOL/ dict !,nosave
+        \$(DDL) /IN \$<,OUT =SPOOL,TERM \$NULL/ dict !,nosave
 //
 EOF
 	edit_loader ddlsrc <<-EOF > /dev/null &&
@@ -34,7 +46,7 @@ EOF
 	launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.DDL /IN ddlsrc,OUT =SPOOL/ dict !,nosave
+	\$SYSTEM.SYSTEM.DDL /IN ddlsrc,OUT =SPOOL,TERM \$NULL/ dict !,nosave
 	EOF
 	test_cmp expecting actual
 '
@@ -56,7 +68,7 @@ a
 all: obj
 
 obj: csrc
-        \$(NMC) /IN \$<,OUT =SPOOL/ \$@
+        ${CCOMPILER} /IN \$<,OUT =SPOOL,TERM \$NULL/ \$@
 //
 EOF
 
@@ -73,7 +85,7 @@ EOF
 	test_expect_code 2 launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.NMC /IN csrc,OUT =SPOOL/ obj
+	${CCOMPILER} /IN csrc,OUT =SPOOL,TERM \$NULL/ obj
 	EOF
 	test_cmp expecting actual
 '
@@ -88,7 +100,7 @@ a
 all: obj
 
 obj: csrc
-        \$(NMC) /IN \$<,OUT =SPOOL/ \$@
+        ${CCOMPILER} /IN \$<,OUT =SPOOL,TERM \$NULL/ \$@
 //
 EOF
 	edit_loader csrc <<-EOF > /dev/null &&
@@ -104,7 +116,7 @@ EOF
 	launch_make --legacy-cc > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.NMC /IN csrc,OUT =SPOOL/ obj
+	${CCOMPILER} /IN csrc,OUT =SPOOL,TERM \$NULL/ obj
 	EOF
 	test_cmp expecting actual
 '

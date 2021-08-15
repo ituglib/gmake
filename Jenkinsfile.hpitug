@@ -47,7 +47,7 @@ pipeline {
             steps {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib']) {
-                    sh '/usr/coreutils/bin/make -k test TEST_LINT= SHELL=/usr/coreutils/bin/bash || echo "GMake Test FAILURE"'
+                    sh '/usr/coreutils/bin/make -C test TEST_LINT= SHELL=/usr/coreutils/bin/bash'
                 }
             }
         }
