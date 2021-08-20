@@ -25,6 +25,11 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "job.h"
 #include "commands.h"
 
+#if defined(__TANDEM)
+#include <sys/utsname.h>
+static char tos_version[8]; /* sizeof utsname.release */
+#endif
+
 /* Define GCC_IS_NATIVE if gcc is the native development environment on
    your system (gcc/bison/flex vs cc/yacc/lex).  */
 #if defined(__MSDOS__) || defined(__EMX__)
@@ -531,13 +536,21 @@ static const char *default_variables[] =
 # endif /* __MSDOS__ */
     "OBJC", "gcc",
 #elif defined(_GUARDIAN_TARGET)
+#if defined (_TNS_E_TARGET)
+	"TNS_PLATFORM", "E",
+#elif defined (_TNS_X_TARGET)
+	"TNS_PLATFORM", "X",
+#endif
+	"TOS_VERSION", tos_version,
 	"SYSVOL", "$SYSTEM.SYSTEM",
 	"NSGITVOL", "$SYSTEM.NSGIT",
     "AR", "$(SYSVOL).AR",
     "ARFLAGS", "rv",
 	"CC", "$(SYSVOL).C",
 	"CPP", "$(SYSVOL).C",
+#if defined (_TNS_E_TARGET)
 	"NMC", "$(SYSVOL).NMC",
+#endif
 	"TAL", "$(SYSVOL).TAL",
 	"OSHARGS", "-osstty",
 	"SH", "$(SYSVOL).OSH $(OSHARGS)",
@@ -793,6 +806,15 @@ install_default_implicit_rules (void)
     install_pattern_rule (p, 1);
 }
 
+#if defined(__TANDEM)
+static void set_tos_version(void) {
+  struct utsname name;
+  memset(&name, 0, sizeof(name));
+  uname(&name);
+  strcpy(tos_version, name.release);
+}
+#endif
+
 void
 define_default_variables (void)
 {
@@ -803,6 +825,10 @@ define_default_variables (void)
 
   for (s = default_variables; *s != 0; s += 2)
     define_variable (s[0], strlen (s[0]), s[1], o_default, 1);
+
+#if defined(__TANDEM)
+  set_tos_version();
+#endif
 }
 
 void
