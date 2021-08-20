@@ -10,8 +10,8 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 06 August 2021, was written for the 4.1g5
-version of GMake, based on GNU Make 4.1. There have been many contributors to
+This edition, last updated on 20 August 2021, was written for the 4.1g5
+version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
 
@@ -117,6 +117,8 @@ The following predefined variables are added to GMake:
 
 | Variable  | Default            | Meaning                                                    |
 | --------- | ------------------ | -----------------------------------------------------------|
+| `TNS_PLATFORM` | `E`,`X`       | Operating system on which GMAKE is running.                |
+| `TOS_VERSION` | `J06`,`L21`, etc.       | Operating system release identifier.                   |
 | `SYSVOL` | `$SYSTEM.SYSTEM` | The default location of system programs.                   |
 | `OSHARGS`| `-osstty`         | Default arguments for OSH, specified in the $(SH) variable.|
 | `SH`      | `$(SYSVOL).OSH`  | The default location of OSH.                               |
@@ -140,7 +142,7 @@ The following predefined variables are added to GMake:
 | `FORTRAN`  | `$(SYSVOL).FORTRAN`  | FORTRAN compiler program location.                        |
 | `FUP`      | `$(SYSVOL).FUP`       | FUP utility program location.                             |
 | `LD`       | `$(SYSVOL).XLD`        | Linker program location. `ELD` on J-series.             |
-| `NMC`       | `$(SYSVOL).NMC`      | NMC compiler program location.                            |
+| `NMC`       | `$(SYSVOL).NMC`      | NMC compiler program location. J-series only.             |
 | `OCA`      | `$(SYSVOL).OCA`       | OCA program location.                                     |
 | `OSH`       | `$(SYSVOL).OSH $(OSHARGS)` | The default location of OSH and arguments.        |
 | `PATHCOM`  | `$(SYSVOL).PATHCOM`   | PATHCOM program location.                                |
@@ -167,7 +169,7 @@ More variables will be defined in future releases.
 
 ### Predefined Functions
 
-Some substitution functions are not supported by GMake or GMaken. Please check
+Some substitution functions are not supported by GMake. Please check
 individual functions before committing to their use.
 
 #### `$(add_define define-attributes)` (GMaken Only)
@@ -241,11 +243,6 @@ and setting `ASSIGNs` should be specified before running programs in a recipe.
             $(assign SSV0 $SYSTEM.SYSTEM)
             $(TAL) /in $</ $@
 
-__Note__: The `$(shell command)` function is planned for the 4.3 release of
-GMake.
-
-There are other functions that do not work in GMake.
-
 #### `$(delay time units)` (GMaken Only)
 
 The `$(delay time units)` function causes the current recipe to delay for
@@ -285,7 +282,7 @@ and setting `PARAMs` should be specified before running programs in a recipe.
             $(param SWAPVOL $SWAP)
             $(TAL) /in $</ $@
 
-#### `$(pname file)` ####
+#### `$(pname file)`
 
 The `pname` function converts a GUARDIAN file name into an OSS path. The
 GUARDIAN name can be fully or partially qualified and does not need to exist.
@@ -298,6 +295,20 @@ command `pname -s guardian-file`.
 
     SRC = $VOL.SUBVOL.FILE
     OSS_SRC = $(pname $(SRC))
+
+#### `$(shell command)` (GMaken Only)
+
+The shell command function is implemented in GMaken. This function executes the
+specified command in a TACL process, captures the output, and returns the
+result. Typically, the result should only be a single line of output. You can
+assign the result to a variable, for example:
+
+    VERSION:=$(shell nsgit describe --long --first-parent)
+
+captures the current version from the most recent git tag in the local NSGit
+repository. Caution must be used with the `$(shell)` function as not all
+programs are compatible with its use. Some OSH functions are known to cause
+problems for the `$(shell)` function and may not work as intended.
 
 ### Shell Control
 
