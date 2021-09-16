@@ -9,7 +9,7 @@ ALLOW_WARNINGS ?= 1506,161,770,262,203,272,265
 CFLAGS_DBG =
 # Set up compiler and its flags
 CC=c99
-INCLUDES=-I. -I./glob -I/G/system/zsysdefs
+INCLUDES=-I. -I./glob -I/G/system/zsysdefs -I/G/system/zsutver
 CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE \
 	-D HAVE_CONFIG_H -Wextensions -g  -Wnowarn=$(ALLOW_WARNINGS) \
 	-O2 $(INCLUDES) $(CFLAGS_DBG) 

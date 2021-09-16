@@ -27,7 +27,11 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #if defined(__TANDEM)
 #include <sys/utsname.h>
+#ifndef OMIT_PSVGTH
+#include "psvgt.h"
+#endif
 static char tos_version[8]; /* sizeof utsname.release */
+static char tos_version_full[17]; /* sizeof utsname.release+version+dot */
 #endif
 
 /* Define GCC_IS_NATIVE if gcc is the native development environment on
@@ -537,65 +541,66 @@ static const char *default_variables[] =
     "OBJC", "gcc",
 #elif defined(_GUARDIAN_TARGET)
 #if defined (_TNS_E_TARGET)
-	"TNS_PLATFORM", "E",
+    "TNS_PLATFORM", "E",
 #elif defined (_TNS_X_TARGET)
-	"TNS_PLATFORM", "X",
+    "TNS_PLATFORM", "X",
 #endif
-	"TOS_VERSION", tos_version,
-	"SYSVOL", "$SYSTEM.SYSTEM",
-	"NSGITVOL", "$SYSTEM.NSGIT",
+    "TOS_VERSION", tos_version,
+    "TOS_VERSION_FULL", tos_version_full,
+    "SYSVOL", "$SYSTEM.SYSTEM",
+    "NSGITVOL", "$SYSTEM.NSGIT",
     "AR", "$(SYSVOL).AR",
     "ARFLAGS", "rv",
-	"CC", "$(SYSVOL).C",
-	"CPP", "$(SYSVOL).C",
+    "CC", "$(SYSVOL).C",
+    "CPP", "$(SYSVOL).C",
 #if defined (_TNS_E_TARGET)
-	"NMC", "$(SYSVOL).NMC",
+    "NMC", "$(SYSVOL).NMC",
 #endif
-	"TAL", "$(SYSVOL).TAL",
-	"OSHARGS", "-osstty",
-	"SH", "$(SYSVOL).OSH $(OSHARGS)",
-	"OSH", "$(SYSVOL).OSH $(OSHARGS)",
-	"COBOL85", "$(SYSVOL).COBOL85",
-	"CCOMP", "$(SYSVOL).CCOMP",
-	"CPPCOMP", "$(SYSVOL).CPPCOMP",
-	"CFRONT", "$(SYSVOL).CFRONT",
-	"SCOBOL", "$(SYSVOL).SCOBOLX",
-	"SCOBOLX", "$(SYSVOL).SCOBOLX",
-	"ENABLE", "$(SYSVOL).ENABLE",
-	"FUP", "$(SYSVOL).FUP",
-	"OCA", "$(SYSVOL).OCA",
-	"BIND", "$(SYSVOL).BIND",
-	"SQLCI", "$(SYSVOL).SQLCI",
-	"SQLCOMP", "$(SYSVOL).SQLCOMP",
-	"SPOOLCOM", "$(SYSVOL).SPOOLCOM",
-	"GMAKEDEP", "$(NSGITVOL).GMAKEDEP",
-	"TACL", "$(SYSVOL).TACL",
-	"DDL", "$(SYSVOL).DDL",
-	"AXCEL", "$(SYSVOL).AXCEL",
-	"CTOEDIT", "$(SYSVOL).CTOEDIT",
-	"EDITTOC", "$(SYSVOL).EDITTOC",
-	"FORTRAN", "$(SYSVOL).FORTRAN",
-	"PATHCOM", "$(SYSVOL).PATHCOM",
-	"PDMCOM", "$(SYSVOL).PDMCOM",
-	"SCUP", "$(SYSVOL).SCUP",
-	"TEMPL", "$(SYSVOL).TEMPL",
-	"TEMPLI", "$(SYSVOL).TEMPLI",
-	"EDIT", "$(SYSVOL).EDIT",
-	"TFORM", "$(SYSVOL).TFORM",
-	"TGAL", "$(SYSVOL).TGAL",
-	"VPROC", "$(SYSVOL).VPROC",
+    "TAL", "$(SYSVOL).TAL",
+    "OSHARGS", "-osstty",
+    "SH", "$(SYSVOL).OSH $(OSHARGS)",
+    "OSH", "$(SYSVOL).OSH $(OSHARGS)",
+    "COBOL85", "$(SYSVOL).COBOL85",
+    "CCOMP", "$(SYSVOL).CCOMP",
+    "CPPCOMP", "$(SYSVOL).CPPCOMP",
+    "CFRONT", "$(SYSVOL).CFRONT",
+    "SCOBOL", "$(SYSVOL).SCOBOLX",
+    "SCOBOLX", "$(SYSVOL).SCOBOLX",
+    "ENABLE", "$(SYSVOL).ENABLE",
+    "FUP", "$(SYSVOL).FUP",
+    "OCA", "$(SYSVOL).OCA",
+    "BIND", "$(SYSVOL).BIND",
+    "SQLCI", "$(SYSVOL).SQLCI",
+    "SQLCOMP", "$(SYSVOL).SQLCOMP",
+    "SPOOLCOM", "$(SYSVOL).SPOOLCOM",
+    "GMAKEDEP", "$(NSGITVOL).GMAKEDEP",
+    "TACL", "$(SYSVOL).TACL",
+    "DDL", "$(SYSVOL).DDL",
+    "AXCEL", "$(SYSVOL).AXCEL",
+    "CTOEDIT", "$(SYSVOL).CTOEDIT",
+    "EDITTOC", "$(SYSVOL).EDITTOC",
+    "FORTRAN", "$(SYSVOL).FORTRAN",
+    "PATHCOM", "$(SYSVOL).PATHCOM",
+    "PDMCOM", "$(SYSVOL).PDMCOM",
+    "SCUP", "$(SYSVOL).SCUP",
+    "TEMPL", "$(SYSVOL).TEMPL",
+    "TEMPLI", "$(SYSVOL).TEMPLI",
+    "EDIT", "$(SYSVOL).EDIT",
+    "TFORM", "$(SYSVOL).TFORM",
+    "TGAL", "$(SYSVOL).TGAL",
+    "VPROC", "$(SYSVOL).VPROC",
 #if defined (_TNS_E_TARGET)
-	"COBOL", "$(SYSVOL).ECOBOL",
-	"COBEX", "$(SYSVOL).ECOBEX0",
-	"PTAL", "$(SYSVOL).EPTAL",
-	"LD", "$(SYSVOL).ELD",
+    "COBOL", "$(SYSVOL).ECOBOL",
+    "COBEX", "$(SYSVOL).ECOBEX0",
+    "PTAL", "$(SYSVOL).EPTAL",
+    "LD", "$(SYSVOL).ELD",
 #elif defined (_TNS_X_TARGET)
-	"COBOL", "$(SYSVOL).XCOBOL",
-	"COBEX", "$(SYSVOL).XCOBEX0",
-	"PTAL", "$(SYSVOL).XPTAL",
-	"LD", "$(SYSVOL).XLD",
+    "COBOL", "$(SYSVOL).XCOBOL",
+    "COBEX", "$(SYSVOL).XCOBEX0",
+    "PTAL", "$(SYSVOL).XPTAL",
+    "LD", "$(SYSVOL).XLD",
 #endif
-	"NSGIT", "$(NSGITVOL).NSGIT",
+    "NSGIT", "$(NSGITVOL).NSGIT",
 
 #else
     "CC", "cc",
@@ -807,11 +812,41 @@ install_default_implicit_rules (void)
 }
 
 #if defined(__TANDEM)
-static void set_tos_version(void) {
+void set_tos_version(void) {
   struct utsname name;
+#ifndef OMIT_PSVGTH
+  short result;
+  short error_detail;
+  short tosv;
+  short mintosv;
+  char sutver[60];
+  short sutver_len;
+  char releaseId[60];
+  short releaseId_len;
+#endif
+
   memset(&name, 0, sizeof(name));
   uname(&name);
   strcpy(tos_version, name.release);
+
+#ifndef OMIT_PSVGTH
+  result = SUTVER_GET_(
+    &error_detail,,
+    &tosv,
+    &mintosv,,
+    sutver, (short) sizeof(sutver), &sutver_len,
+    releaseId, (short) sizeof(releaseId), &releaseId_len);
+    if (result) {
+      releaseId[releaseId_len] = '\0';
+    } else {
+      sutver[sutver_len] = '\0';
+      releaseId[releaseId_len] = '\0';
+    }
+    strcpy(tos_version_full, releaseId);
+#else
+    snprintf(tos_version_full, sizeof(tos_version_full),
+      "%s.%s", name.release, name.version);
+#endif
 }
 #endif
 
@@ -825,10 +860,6 @@ define_default_variables (void)
 
   for (s = default_variables; *s != 0; s += 2)
     define_variable (s[0], strlen (s[0]), s[1], o_default, 1);
-
-#if defined(__TANDEM)
-  set_tos_version();
-#endif
 }
 
 void

@@ -587,6 +587,9 @@ void undefine_default_variables (void);
 void set_default_suffixes (void);
 void install_default_suffix_rules (void);
 void install_default_implicit_rules (void);
+#ifdef __TANDEM
+void set_tos_version(void);
+#endif
 
 void build_vpath_lists (void);
 void construct_vpath_list (char *pattern, char *dirpath);

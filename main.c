@@ -1297,6 +1297,9 @@ main (int argc, char **argv, char **envp)
   /* Set up to access user data (files).  */
   user_access ();
 
+#ifdef __TANDEM
+  set_tos_version();
+#endif
   initialize_global_hash_tables ();
 
   /* Figure out where we are.  */
