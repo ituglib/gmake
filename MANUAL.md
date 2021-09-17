@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 20 August 2021, was written for the 4.1g5
+This edition, last updated on 16 September 2021, was written for the 4.3g3
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -68,7 +68,7 @@ be used. The `$(VARIABLE)` form should be used for all variable references.
 
 ### Special Variables
 
-GUARDIAN MAP DEFINE values, if they are in the GMaken process context, can be
+GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be
 referenced using the form:
 
     $=DEFINE
@@ -95,6 +95,32 @@ Any of the `$(@D)` or `$(@F)` predefines have no meaning in GMake.
 
 Other substitution forms may also not work in GMake.
 
+## Building GMAKE
+
+`GMAKE` is build in OSS using `/usr/coreutils/bin/make`.
+
+### L-Series
+
+To build on L-Series, use make, and specify a GUARDIAN target file.
+
+    make -f Makefile.NSX.OSS GMAKE_EXE=/G/.../.../gmake
+
+### J-Series
+
+To build on J-Series, use make, and specify a GUARDIAN target file.
+
+    make -f Makefile.NSE.OSS GMAKE_EXE=/G/.../.../gmake
+
+### Workstations
+
+Makefiles are supplied for NSDEE and scripted builds. The Makefiles for the
+platforms are `Makefile.NSX.Win` and `Makefile.NSE.Win`. Because of a
+requirement to use the `$system.zsutver.psvgth` file for the
+`TOS_VERSION_FULL` variable, which is not available to cross compilers, the
+value reported by this variable will not include the third version identifier on
+workstation builds - although you can override Make variables for `INCLUDE`
+and `CFLAGS` to point to that file by turning off the `-D OMIT_PSVGT`. 
+
 ## Execution Differences
 
 ### Error Handling
@@ -119,6 +145,7 @@ The following predefined variables are added to GMake:
 | --------- | ------------------ | -----------------------------------------------------------|
 | `TNS_PLATFORM` | `E`,`X`       | Operating system on which GMAKE is running.                |
 | `TOS_VERSION` | `J06`,`L21`, etc.       | Operating system release identifier.                   |
+| `TOS_VERSION_FULL` | `J06.23.01`,`L21.02.00`, etc. | Full operating system release version.    |
 | `SYSVOL` | `$SYSTEM.SYSTEM` | The default location of system programs.                   |
 | `OSHARGS`| `-osstty`         | Default arguments for OSH, specified in the $(SH) variable.|
 | `SH`      | `$(SYSVOL).OSH`  | The default location of OSH.                               |
@@ -172,11 +199,11 @@ More variables will be defined in future releases.
 Some substitution functions are not supported by GMake. Please check
 individual functions before committing to their use.
 
-#### `$(add_define define-attributes)` (GMaken Only)
+#### `$(add_define define-attributes)`
 
 The `add_define` function adds a GUARDIAN define into the process context of
-the GMaken process. The added DEFINE is usable as a DEFINE variable in rules and
-recipes. It is also passed to any process started by the GMaken process. DEFINE
+the GMake process. The added DEFINE is usable as a DEFINE variable in rules and
+recipes. It is also passed to any process started by the GMake process. DEFINE
 names always must begin with an `=` followed by a combination of 1 to 24
 letters, numbers, carets or underscore. The `add_define` function can create
 many different DEFINE classes:
@@ -197,10 +224,10 @@ automatically numbered and can appear multiple times.
 The `$(define_add)` function is an alias to `$(add_define)` for historical
 reasons.
 
-#### `$(delete_define define|**)` (GMaken Only)
+#### `$(delete_define define|**)`
 
 The `delete_define` function removes one or all GUARDIAN DEFINES in the PFS
-of the GMaken process.
+of the GMake process.
 
 `$(delete_define =define)` removes a specific DEFINE. No error is reported
 if the specified DEFINE does not exist.
@@ -214,7 +241,7 @@ reasons.
 #### `$(assign name,file)`
 
 The `assign` function adds a GUARDIAN `ASSIGN` to the process context. The
-initial set of `ASSIGN` values are loaded when GMAKEN starts. This function can
+initial set of `ASSIGN` values are loaded when GMAKE starts. This function can
 modify or add an `ASSIGN`.
 
 Note that functions are evaluated as a set before programs are run, so clearing
@@ -243,7 +270,7 @@ and setting `ASSIGNs` should be specified before running programs in a recipe.
             $(assign SSV0 $SYSTEM.SYSTEM)
             $(TAL) /in $</ $@
 
-#### `$(delay time units)` (GMaken Only)
+#### `$(delay time units)`
 
 The `$(delay time units)` function causes the current recipe to delay for
 some period of time. This is similar to calling sleep in OSS. _time_ must be a
@@ -253,7 +280,7 @@ positive integer. _units_ can be one of: **microseconds** (the default);
 #### `$(param name value)`
 
 The `param` function adds a GUARDIAN `PARAM` to the process context. The
-initial set of `PARAM` values are loaded when GMAKEN starts. This function can
+initial set of `PARAM` values are loaded when GMAKE starts. This function can
 modify or add a `PARAM`.
 
 Note that functions are evaluated as a set before programs are run, so clearing
@@ -296,9 +323,9 @@ command `pname -s guardian-file`.
     SRC = $VOL.SUBVOL.FILE
     OSS_SRC = $(pname $(SRC))
 
-#### `$(shell command)` (GMaken Only)
+#### `$(shell command)`
 
-The shell command function is implemented in GMaken. This function executes the
+The shell command function is implemented in GMake. This function executes the
 specified command in a TACL process, captures the output, and returns the
 result. Typically, the result should only be a single line of output. You can
 assign the result to a variable, for example:
@@ -309,6 +336,25 @@ captures the current version from the most recent git tag in the local NSGit
 repository. Caution must be used with the `$(shell)` function as not all
 programs are compatible with its use. Some OSH functions are known to cause
 problems for the `$(shell)` function and may not work as intended.
+
+#### `$(vcompare version1,version2)`
+
+The `vcompare` command function compares two version strings and reports
+whether the versions are equal, less, or greater than each other. If `version1`
+is less than `version1`, `-1` is returned. If the two are equal, `0` is
+returned. If `version1` is greater than `version2`, `1` is returned. If the
+two versions do not contain blanks, it is legal to use a blank separator instead
+of a comma between the two. `vcompare` checks each dot(`.`) or space(` `)
+separated segment of each version. If the segment contains only digits, a
+numerical comparison is used, so `1.100` is greater than `1.1`. If the two
+numbers are equal but different in length, like `01` and `1`, the numbers are
+considered different with the longer string being considered less because it
+would have to have leading zeros. TOS versions can be compared. The following
+is a usage example:
+
+    ifeq ($vcompare $(TOS_VERSION_FULL),L20.10.00),1)
+
+checks whether the operating system is more recent than `L20.10.00`.
 
 ### Shell Control
 
@@ -340,7 +386,7 @@ of a system generated name.
 
 ### Special Commands
 
-The `PARAM` command is supported by `GMAKEN` in recipes. `PARAMs` can be
+The `PARAM` command is supported by `GMAKE` in recipes. `PARAMs` can be
 quoted or unquoted:
 
     PARAM SWAPVOL $SYSTEM

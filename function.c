@@ -2292,29 +2292,29 @@ do_additional_define_fields(char *field, char defaultNames[24]) {
   short error;
 
   while (field && *field) {
-	next = strchr(field, ',');
-	if (next) {
-	  *next++ = '\0';
-	}
-	value = strchr(field, '=');
-	if (!value)
-	  OS (fatal, *expanding_var, _("Missing define argument for %s"), field);
-	*value++ = '\0';
-	if (strlen(field) > sizeof(className))
-	  OS (fatal, *expanding_var, _("Define argument %s is too long"), field);
+    next = strchr(field, ',');
+    if (next) {
+      *next++ = '\0';
+    }
+    value = strchr(field, '=');
+    if (!value)
+      OS (fatal, *expanding_var, _("Missing define argument for %s"), field);
+    *value++ = '\0';
+    if (strlen(field) > sizeof(className))
+      OS (fatal, *expanding_var, _("Define argument %s is too long"), field);
 
-	_strupr(field);
+    _strupr(field);
 
-	memset(className, ' ', sizeof(className));
-	memcpy(className, field, strlen(field));
+    memset(className, ' ', sizeof(className));
+    memcpy(className, field, strlen(field));
 
-	error = DEFINESETATTR(className, value, (short) strlen(value), //
-		(short *)defaultNames);
-	if (error)
-	  ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
-		  field);
+    error = DEFINESETATTR(className, value, (short) strlen(value), //
+        (short *)defaultNames);
+    if (error)
+      ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+          field);
 
-	field = next;
+    field = next;
   }
 }
 
@@ -2334,34 +2334,34 @@ do_search_define_fields(char *argument, char defaultNames[24]) {
   char fieldBuffer[2048];
 
   while (argument && *argument) {
-	next = strchr(argument, ',');
-	if (next) {
-	  *next++ = '\0';
-	}
-	value = strchr(argument, '=');
-	if (!value)
-	  OS (fatal, *expanding_var, _("Missing define argument for %s"), argument);
-	*value++ = '\0';
+    next = strchr(argument, ',');
+    if (next) {
+      *next++ = '\0';
+    }
+    value = strchr(argument, '=');
+    if (!value)
+      OS (fatal, *expanding_var, _("Missing define argument for %s"), argument);
+    *value++ = '\0';
 
-	_strupr(argument);
+    _strupr(argument);
 
-	if (strcmp(argument, "SUBVOL") == 0) {
+    if (strcmp(argument, "SUBVOL") == 0) {
       sprintf(fieldBuffer, "%s%d", argument, subvolNumber++);
-	} else if (strcmp(argument, "RELSUBVOL") == 0) {
+    } else if (strcmp(argument, "RELSUBVOL") == 0) {
       sprintf(fieldBuffer, "%s%d", argument, relsubvolNumber++);
-	} else
+    } else
       OS (fatal, *expanding_var, _("Argument %s must be 'subvol' or 'relsubvol'"), argument);
 
-	memset(className, ' ', sizeof(className));
-	memcpy(className, fieldBuffer, strlen(fieldBuffer));
+    memset(className, ' ', sizeof(className));
+    memcpy(className, fieldBuffer, strlen(fieldBuffer));
 
-	error = DEFINESETATTR(className, value, (short) strlen(value), //
-		(short *)defaultNames);
-	if (error)
-	  ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
+    error = DEFINESETATTR(className, value, (short) strlen(value), //
+        (short *)defaultNames);
+    if (error)
+      ONS (fatal, *expanding_var, _("DEFINESETATTR error %d on %s"), error,
         argument);
 
-	argument = next;
+    argument = next;
   }
 }
 
@@ -2378,7 +2378,7 @@ define_add_map (char *o, const char *define, char *defineName, const char *file)
   short error;
 
   if (ISDB(DB_BASIC))
-	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "MAP", file);
+    printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "MAP", file);
 
   strcpy(someFileName, getenv("DEFAULTS"));
   strcat(someFileName, ".A");
@@ -2406,7 +2406,7 @@ define_add_map (char *o, const char *define, char *defineName, const char *file)
         define);
 
   if (ISDB(DB_BASIC))
-	printf("Added MAP DEFINE %s (%s)\n", define, file);
+    printf("Added MAP DEFINE %s (%s)\n", define, file);
 
   return o;
 }
@@ -2425,7 +2425,7 @@ define_add_catalog (char *o, const char *define, char *defineName, const char *s
   short error;
 
   if (ISDB(DB_BASIC))
-	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "CATALOG", subvol);
+    printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "CATALOG", subvol);
 
   strcpy(someFileName, getenv("DEFAULTS"));
   strcat(someFileName, ".A");
@@ -2453,7 +2453,7 @@ define_add_catalog (char *o, const char *define, char *defineName, const char *s
         define);
 
   if (ISDB(DB_BASIC))
-	printf("Added CATALOG DEFINE %s (%s)\n", define, subvol);
+    printf("Added CATALOG DEFINE %s (%s)\n", define, subvol);
 
   return o;
 }
@@ -2474,7 +2474,7 @@ define_add_spool (char *o, const char *define, char *defineName, const char *spo
   char *s;
 
   if (ISDB(DB_BASIC))
-	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SPOOL", spooler);
+    printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SPOOL", spooler);
 
   strcpy(someFileName, getenv("DEFAULTS"));
   strcat(someFileName, ".A");
@@ -2515,7 +2515,7 @@ define_add_spool (char *o, const char *define, char *defineName, const char *spo
         define);
 
   if (ISDB(DB_BASIC))
-	printf("Added SPOOL DEFINE %s (%s)\n", define, spooler);
+    printf("Added SPOOL DEFINE %s (%s)\n", define, spooler);
 
   free(arguments);
   return o;
@@ -2537,7 +2537,7 @@ define_add_search (char *o, const char *define, char *defineName, const char *su
   char *s;
 
   if (ISDB(DB_BASIC))
-	printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SEARCH", subvol);
+    printf("Adding DEFINE %s, CLASS %s, FILE %s\n", define, "SEARCH", subvol);
 
   strcpy(someFileName, getenv("DEFAULTS"));
   strcat(someFileName, ".A");
@@ -2560,7 +2560,7 @@ define_add_search (char *o, const char *define, char *defineName, const char *su
         define);
 
   if (ISDB(DB_BASIC))
-	printf("Added SEARCH DEFINE %s (%s)\n", define, subvol);
+    printf("Added SEARCH DEFINE %s (%s)\n", define, subvol);
 
   free(arguments);
   return o;
@@ -2627,7 +2627,7 @@ func_define_delete (char *o, char **argv, const char *funcname)
   memcpy(defineName, define, strlen(define));
 
   if (ISDB(DB_BASIC))
-	printf("Deleting DEFINE %s\n", define);
+    printf("Deleting DEFINE %s\n", define);
 
   if (strcmp(define, "**") != 0) {
     error = DEFINEDELETE(defineName);
@@ -2635,14 +2635,14 @@ func_define_delete (char *o, char **argv, const char *funcname)
       ONS (fatal, *expanding_var, _("DEFINEDELETE error %d on %s"), error,
           define);
     if (ISDB(DB_BASIC))
-  	  printf("Deleted DEFINE %s\n", define);
+        printf("Deleted DEFINE %s\n", define);
   } else {
-	error = DEFINEDELETEALL();
+    error = DEFINEDELETEALL();
     if (error && error != 2051)
       ONS (fatal, *expanding_var, _("DEFINEDELETEALL error %d on %s"), error,
           define);
     if (ISDB(DB_BASIC))
-  	  printf("Deleted all DEFINES %s\n", define);
+        printf("Deleted all DEFINES %s\n", define);
   }
 
   return o;
@@ -2668,16 +2668,16 @@ func_delay (char *o, char **argv, const char *funcname)
   if (*endp == ' ') {
     units = endp+1;
     if (units) {
-	if (strcmp(units, "seconds") == 0) {
-	  value *= 1000000LL;
-	} else if (strcmp(units, "minutes") == 0) {
-	  value *= 60000000LL;
-	} else if (strcmp(units, "milliseconds") == 0) {
-	  value *= 1000LL;
-	} else if (strcmp(units, "microseconds") == 0) {
-	} else if (strcmp(units, "hours") == 0) {
-	  value *= 3600000000LL;
-	} else
+    if (strcmp(units, "seconds") == 0) {
+      value *= 1000000LL;
+    } else if (strcmp(units, "minutes") == 0) {
+      value *= 60000000LL;
+    } else if (strcmp(units, "milliseconds") == 0) {
+      value *= 1000LL;
+    } else if (strcmp(units, "microseconds") == 0) {
+    } else if (strcmp(units, "hours") == 0) {
+      value *= 3600000000LL;
+    } else
       OS (fatal, *expanding_var, _("delay: units must be 'seconds', 'minutes', 'milliseconds', 'microseconds', 'hours', not '%s'"), units);
     }
   }
@@ -2714,19 +2714,19 @@ func_pname (char *o, char **argv, const char *funcname)
 
   error = FILENAME_RESOLVE_(guardian, (short) strlen(guardian),
                             fileName, (short)(sizeof(fileName)-1), &nameLength,
-							010 /* Resolve DEFINES */);
+                            010 /* Resolve DEFINES */);
   if (error)
-	return o;
+    return o;
 
   if (ISDB(DB_BASIC))
-	printf("Resolved %s to %s\n", guardian, fileName);
+    printf("Resolved %s to %s\n", guardian, fileName);
 
   fileName[nameLength] = '\0';
 
   _strlwr(nodeName);
   _strlwr(fileName);
   if (fileName[0] == '\\') {
-	/* This is an EXPAND name. */
+    /* This is an EXPAND name. */
     p = strchr(fileName, '.');
     *p++ = '\0';
     if (strcmp(fileName, nodeName) == 0) {
@@ -2776,28 +2776,28 @@ func_indexsection (char *o, char **argv, const char *funcname)
 
   sections = strchr(copylib, ' ');
   if (!sections)
-	OS (fatal, *expanding_var, _("indexsection: missing section file after %s"), copylib);
+    OS (fatal, *expanding_var, _("indexsection: missing section file after %s"), copylib);
   *sections++ = '\0';
   while(*sections == ' ') sections++;
   if (!*sections)
-	OS (fatal, *expanding_var, _("indexsection: missing section file after %s"), copylib);
+    OS (fatal, *expanding_var, _("indexsection: missing section file after %s"), copylib);
 
   error = FILENAME_RESOLVE_(copylib, (short)strlen(copylib),
           copylibFile, (short) sizeof(copylibFile), &length);
   if (error)
-	OSN(fatal, *expanding_var, _("%s: unable to resolve. error %d"), copylibFile, error);
+    OSN(fatal, *expanding_var, _("%s: unable to resolve. error %d"), copylibFile, error);
   copylibFile[length] = '\0';
 
   error = FILENAME_RESOLVE_(sections, (short)strlen(sections),
-		  sectionsFile, (short) sizeof(sectionsFile), &length);
+          sectionsFile, (short) sizeof(sectionsFile), &length);
   if (error)
-	OSN(fatal, *expanding_var, _("%s: unable to resolve. error %d"), copylibFile, error);
+    OSN(fatal, *expanding_var, _("%s: unable to resolve. error %d"), copylibFile, error);
   sectionsFile[length] = '\0';
 
   open_copylib_dll();
   if (IS_COPYLIB_ENABLED) {
-	error = copylib_reindex_func(copylibFile, sectionsFile);
-	if (error)
+    error = copylib_reindex_func(copylibFile, sectionsFile);
+    if (error)
       ON(fatal, *expanding_var, _("indexsection: unable to index. error %d"), error);
   }
 
@@ -2865,7 +2865,7 @@ func_assign_add (char *o, char **argv, const char *funcname)
 
   error = tandem_set_assign(name, value);
   if (error)
-	OSN (fatal, *expanding_var, _("assign: unable to resolve %s error %d"), value, error);
+    OSN (fatal, *expanding_var, _("assign: unable to resolve %s error %d"), value, error);
 
   return o;
 }
@@ -2881,6 +2881,93 @@ func_assign_clear (char *o, char **argv, const char *funcname)
 
   tandem_clear_assign(name);
 
+  return o;
+}
+
+static int
+func_vcompare_isnumeric(const char *s) {
+  if (!s || !*s)
+    return 0;
+  while (*s) {
+    if (!isdigit(*s))
+      return 0;
+    s++;
+  }
+  return 1;
+}
+static char *
+func_vcompare (char *o, char **argv, const char *funcname)
+{
+  char *version1 = argv[0];
+  char *version2 = argv[1];
+  char *s, *s1, *s2;
+  int usingBlank;
+  long result;
+
+  if (!version2) {
+    version2 = strchr(version1, ' ');
+    if (!version2)
+      OS (fatal, *expanding_var, _("vcompare: missing separator in %s"), version1);
+    *version2++ = '\0';
+  }
+
+  result = 0;
+  while (version1 && version2) {
+    /* advance pointers */
+    usingBlank = 0;
+    s1 = strchr(version1,'.');
+    s = strchr(version1,' ');
+    if (s1) {
+      if (s && s < s1) {
+        usingBlank = -1;
+        s1 = s;
+      }
+    } else if (s) {
+      usingBlank = -1;
+      s1 = s;
+    }
+    if (s1) {
+      *s1++ = '\0';
+    }
+    s2 = strchr(version2, usingBlank ? ' ' : '.');
+    if (s2) {
+      *s2++ = '\0';
+    }
+
+    /* do the comparison */
+    if (func_vcompare_isnumeric(version1) && func_vcompare_isnumeric(version2)) {
+      long v1 = atol(version1);
+      long v2 = atol(version2);
+      result = v1 - v2;
+      if (result == 0) {
+        /* values are equal - check lengths */
+        result = strlen(version2) - strlen(version1);
+      }
+    } else {
+      result = strcasecmp(version1, version2);
+    }
+    if (result != 0)
+      break;
+
+    version1 = s1;
+    version2 = s2;
+  }
+  if (result == 0) {
+    /* Check remnants. */
+    if (version1) {
+      result = 1;
+    } else if (version2) {
+      result = -1;
+    }
+  }
+
+  if (result < 0) {
+    o = variable_buffer_output (o, "-1", 2);
+  } else if (result > 0) {
+    o = variable_buffer_output (o, "1", 1);
+  } else {
+    o = variable_buffer_output (o, "0", 1);
+  }
   return o;
 }
 
@@ -2958,6 +3045,7 @@ static struct function_table_entry function_table_init[] =
   FT_ENTRY ("clear_param",   1,  1,  1,  func_param_clear),
   FT_ENTRY ("assign",        1,  1,  1,  func_assign_add),
   FT_ENTRY ("clear_assign",  1,  1,  1,  func_assign_clear),
+  FT_ENTRY ("vcompare",      1,  2,  1,  func_vcompare),
 #endif
 };
 
