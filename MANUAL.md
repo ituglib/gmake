@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 16 September 2021, was written for the 4.3g3
+This edition, last updated on 1 December 2021, was written for the 4.3g4
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -123,6 +123,12 @@ and `CFLAGS` to point to that file by turning off the `-D OMIT_PSVGT`.
 
 ## Execution Differences
 
+### Load Handling
+
+The `GMAKE` program handles the `load` and `-load` commands slightly
+differently from standard GNU Make. On GUARDIAN, the separator is assumed to
+be `.` instead of `/`.
+ 
 ### Error Handling
 
 The `GMAKE` program differs from the standard GNU Make in terms of how
