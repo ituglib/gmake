@@ -67,6 +67,11 @@ load_object (const floc *flocp, int noerror, const char *ldname,
       struct load_list *new;
       void *dlp = NULL;
 
+#ifdef _GUARDIAN_TARGET
+    /* If the path has no ".", try the current sub-volume first.  */
+      if (! strchr (ldname, '.'))
+        dlp = dlopen (concat (3, getenv("DEFAULTS"), ".", ldname), RTLD_LAZY|RTLD_GLOBAL);
+#else
     /* If the path has no "/", try the current directory first.  */
       if (! strchr (ldname, '/')
 #ifdef HAVE_DOS_PATHS
@@ -74,11 +79,11 @@ load_object (const floc *flocp, int noerror, const char *ldname,
 #endif
          )
         dlp = dlopen (concat (2, "./", ldname), RTLD_LAZY|RTLD_GLOBAL);
+#endif
 
       /* If we haven't opened it yet, try the default search path.  */
       if (! dlp)
         dlp = dlopen (ldname, RTLD_LAZY|RTLD_GLOBAL);
-
       /* Still no?  Then fail.  */
       if (! dlp)
         {
@@ -176,7 +181,11 @@ load_file (const floc *flocp, const char **ldname, int noerror)
     {
       char *p = new;
 
+#ifdef _GUARDIAN_TARGET
+      fp = strrchr (*ldname, '.');
+#else
       fp = strrchr (*ldname, '/');
+#endif
 #ifdef HAVE_DOS_PATHS
       if (fp)
         {
