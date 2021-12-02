@@ -3,7 +3,8 @@
 VPROC_GMAKE=$(shell sh ./version.sh MAIN)
 
 # Set up environment to use product compiler.
-export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\J06.20
+NONSTOPOSVERSION?=J06.20
+export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\$(NONSTOPOSVERSION)
 
 # Set the systype flag.
 SYSTYPE_FLAG = -Wsystype=guardian -Wtarget=tns/e
