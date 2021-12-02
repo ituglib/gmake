@@ -998,6 +998,7 @@
             <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
             		
         </cconfiguration>
+        	
     </storageModule>
     	
     <storageModule moduleId="scannerConfiguration">
@@ -1034,6 +1035,32 @@
     	
     <storageModule moduleId="refreshScope" versionNumber="2">
         		
+        <configuration configurationName="L20.10"/>
+        		
+        <configuration configurationName="J Build OSS">
+            			
+            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="GCC Debug">
+            			
+            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="GCC Build">
+            			
+            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="Default">
+            			
+            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
+            		
+        </configuration>
+        		
         <configuration configurationName="GCC Build OSS">
             			
             <resource resourceType="PROJECT" workspacePath="/nsgit"/>
@@ -1041,12 +1068,6 @@
         </configuration>
         		
         <configuration configurationName="J06.20 Build"/>
-        		
-        <configuration configurationName="J Build OSS">
-            			
-            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
-            		
-        </configuration>
         		
         <configuration configurationName="GCC IBM">
             			
@@ -1068,25 +1089,7 @@
             		
         </configuration>
         		
-        <configuration configurationName="GCC Debug">
-            			
-            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
-            		
-        </configuration>
-        		
         <configuration configurationName="L16.05 OSS">
-            			
-            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
-            		
-        </configuration>
-        		
-        <configuration configurationName="GCC Build">
-            			
-            <resource resourceType="PROJECT" workspacePath="/nsgit"/>
-            		
-        </configuration>
-        		
-        <configuration configurationName="Default">
             			
             <resource resourceType="PROJECT" workspacePath="/nsgit"/>
             		
