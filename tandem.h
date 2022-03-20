@@ -109,4 +109,11 @@ resolve_define (const char *name);
  */
 int
 ignore_tandem_warning(int exit_code, const char *command);
+
+/**
+ * Resolve a subvolume into an OSS path.
+ * @param path is the path to convert, like $data01.m2, or m2.
+ * @return the resolved path or the original path.
+ */
+char *resolve_subvolume(char *path);
 #endif /* _MAKE_TANDEM_H_ */

@@ -578,6 +578,20 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	}
 
 	rc = get_startup_msg(smt, &slen);
+	{
+		char localPath[256];
+		char localSubvolume[256];
+		short defaultName[24];
+		short svLen;
+		getcwd(localPath, sizeof(localPath));
+		strcat(localPath, "/a");
+		error = PATHNAME_TO_FILENAME_(localPath,
+			localSubvolume, (short)sizeof(localSubvolume), &svLen);
+		localSubvolume[svLen] = '\0';
+		error = FILENAME_TO_OLDFILENAME_(localSubvolume, svLen, defaultName);
+		memcpy(smt->defaults.whole, defaultName,
+			(short)sizeof(smt->defaults.whole));
+	}
 	if (ISDB(DB_BASIC))
 		printf("launch_proc get_startup_msg returned "
 				"%d, len %d, code %d, '%.16s', '%.24s', '%.24s', '%s'\n", rc,
@@ -1432,6 +1446,19 @@ int ignore_tandem_warning(int exit_code, const char *command_line) {
 	}
 	return 1;
 }
+
+char *resolve_subvolume(char *path) {
+  static char buffer[2049];
+  short length;
+  short error;
+
+  error = FILENAME_TO_PATHNAME_(path, (short)strlen(path), buffer, (short)sizeof(buffer)-1, &length, 1);
+  if (error)
+    return path;
+  buffer[length] = '\0';
+  return buffer;
+}
+
 
 /*===========================================================================*/
 #pragma page "T0593 GUARDIAN GNU Make- tandem.c Change Descriptions"
