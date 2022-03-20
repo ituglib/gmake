@@ -639,7 +639,9 @@ static const char *default_variables[] =
 #ifdef SCCS_GET
     "GET", SCCS_GET,
 #endif
+#ifndef _GUARDIAN_TARGET
     "LD", "ld",
+#endif
 #ifdef GCC_IS_NATIVE
     "LEX", "flex",
 #else
