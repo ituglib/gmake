@@ -1643,8 +1643,13 @@ main (int argc, char **argv, char **envp)
             p[1] = '\0';
           }
 #endif
+#ifdef _GUARDIAN_TARGET
+          if (chdir (resolve_subvolume((char *)dir)) != 0)
+            pfatal_with_name (dir);
+#else
           if (chdir (dir) < 0)
             pfatal_with_name (dir);
+#endif
         }
     }
 
