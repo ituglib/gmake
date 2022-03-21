@@ -177,6 +177,8 @@ a
 \$(param swapvol \$SYSTEM)
 obj1: src1 
         \$(TAL)/IN \$<,TERM \$NULL/ obj1
+clean:
+        \$(FUP)/TERM \$NULL/ PURGE obj1 !
 //
 EOF
 	edit_loader src1 <<-EOF &&
@@ -191,6 +193,7 @@ BEGIN
 END;
 //
 EOF
+	launch_make clean &&
 	launch_make -d > capture &&
 	fgrep PARAM <capture >actual &&
 	cat >expecting <<-EOF &&
@@ -199,6 +202,8 @@ EOF
 	PARAM P2 Hello added
 	PARAM P2 removed
 	PARAM SWAPVOL \$SYSTEM replaced
+	Emitting PARAM SWAPVOL "\$SYSTEM"
+	Emitting PARAM P1 "Hello There"
 	EOF
 	test_cmp expecting actual
 '
@@ -237,6 +242,8 @@ EOF
 	PARAM P2 Hello added
 	PARAM P2 removed
 	PARAM SWAPVOL \$SYSTEM replaced
+	Emitting PARAM SWAPVOL "\$SYSTEM"
+	Emitting PARAM P1 "Hello There"
 	EOF
 	test_cmp expecting actual
 '
