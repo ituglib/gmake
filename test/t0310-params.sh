@@ -166,7 +166,7 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'PARAM add and delete single' '
+test_expect_failure 'PARAM add and delete single' '
 	edit_loader makefile <<-EOF &&
 dq!a
 a
