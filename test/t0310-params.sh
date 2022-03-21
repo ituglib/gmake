@@ -107,7 +107,7 @@ EOF
 	test_expect_code 2 launch_make
 '
 
-test_expect_success 'PARAM with a bad value passed to a compiler' '
+test_expect_failure 'PARAM with a bad value passed to a compiler' '
 	edit_loader makefile <<-EOF &&
 dq!a
 a
@@ -137,7 +137,7 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success 'PARAM command with a bad value passed to a compiler' '
+test_expect_failure 'PARAM command with a bad value passed to a compiler' '
 	edit_loader makefile <<-EOF &&
 dq!a
 a

@@ -11,7 +11,7 @@ test_description='Test $shell
 test_expect_success 'Test $shell simple case' '
 	edit_loader makefile <<-EOF &&
 a
-SHELLOUT=\$(shell #OUTPUT ABV)
+SHELLOUT:=\$(shell #OUTPUT ABV)
 .PHONY: always
 always:
         \$(TAL)/IN makeSRC1,TERM \$NULL/;DEFINE SPR=\$(SHELLOUT)
@@ -39,8 +39,8 @@ test_expect_success 'Test $shell who case' '
 	edit_loader makefile <<-EOF &&
 dq!a
 a
-SHELLSING=\$(shell #OUTPUT ABV)
-SHELLOUT=\$(shell who)
+SHELLSING:=\$(shell #OUTPUT ABV)
+SHELLOUT:=\$(shell who)
 .PHONY: always
 always:
         \$(info COMMENT \$(SHELLSING))

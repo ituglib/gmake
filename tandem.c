@@ -77,6 +77,8 @@ static short get_param_msg_local(param_msg_type *pmt, short *plen) {
 						entry->name);
 				continue;
 			}
+			if (ISDB(DB_BASIC))
+				printf("Emitting PARAM %s \"%s\"\n", entry->name, entry->value);
 			(pmt->num_params)++;
 			length = strlen(entry->name);
 			*s++ = (unsigned char) length;
@@ -1078,25 +1080,6 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 					doparams);
 	}
 
-	if (doparams) {
-		rc = get_param_msg_local(&pmt, &plen);
-		if (ISDB(DB_BASIC))
-			printf(
-					"launch_proc get_param_msg returned %d, code %d, params %d\n",
-					rc, pmt.msg_code, pmt.num_params);
-
-		if (!rc) {
-			wrerror = WRITEX(filenum, (char *) &pmt, plen);
-			if (wrerror) {
-				FILE_GETINFO_(filenum, &errordet);
-				printf("launch_proc WRITEX failed with error %d, %d\n", wrerror,
-						errordet);
-				FILE_CLOSE_(filenum);
-				return PROCDEATH_PREMATURE;
-			}
-		}
-	} /* if (doparams) */
-
 	if (doassigns) {
 		if (ISDB(DB_BASIC))
 			printf("launch_proc get_max_assign_msg_ordinal returned %d\n", _num_assigns);
@@ -1133,6 +1116,25 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			}
 		} /* for (index = 0; index <= _num_assigns; index++) */
 	} /* if (doassigns) */
+
+	if (doparams) {
+		rc = get_param_msg_local(&pmt, &plen);
+		if (ISDB(DB_BASIC))
+			printf(
+					"launch_proc get_param_msg returned %d, code %d, params %d\n",
+					rc, pmt.msg_code, pmt.num_params);
+
+		if (!rc) {
+			wrerror = WRITEX(filenum, (char *) &pmt, plen);
+			if (wrerror) {
+				FILE_GETINFO_(filenum, &errordet);
+				printf("launch_proc WRITEX failed with error %d, %d\n", wrerror,
+						errordet);
+				FILE_CLOSE_(filenum);
+				return PROCDEATH_PREMATURE;
+			}
+		}
+	} /* if (doparams) */
 
 	FILE_CLOSE_(filenum);
 
