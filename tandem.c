@@ -485,15 +485,17 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	short homelen, oldhome[12], remotepgm = 0;
 	short namespecified = 0, in_found = 0, out_found = 0;
 	zsys_ddl_smsg_proccreate_def olist;
-	char buf[2048], cbuf[LINE_MAX], cmd[48];
+	char buf[2048], cbuf[LINE_MAX], cmd[ZSYS_VAL_LEN_FILENAME+1];
+	short cmdLen;
 	char filename3[ZSYS_VAL_LEN_FILENAME], *bptr, *cptr;
-	char *s1ptr = NULL, *s2ptr = NULL, hometerm[48], inoutfilename[48];
-	char sethometerm[48];
+	char searchDefine[ZSYS_VAL_LEN_FILENAME+1];
+	char *s1ptr = NULL, *s2ptr = NULL, hometerm[ZSYS_VAL_LEN_FILENAME+1], inoutfilename[ZSYS_VAL_LEN_FILENAME+1];
+	char sethometerm[ZSYS_VAL_LEN_FILENAME+1];
 	char *sepptr = NULL, process_name[ZSYS_VAL_LEN_PROCESSNAME + 1];
 	char *nextptr = NULL;
 	char separators[] = " ,/";
 	char mynodename[10], pgmnodename[ZSYS_VAL_LEN_SYSTEMNAME];
-	char olddefaults[48], newdefaults[48];
+	char olddefaults[ZSYS_VAL_LEN_FILENAME+1], newdefaults[ZSYS_VAL_LEN_FILENAME+1];
 	startup_msg_type *smt;
 	assign_msg_type amt;
 	param_msg_type pmt;
@@ -501,6 +503,8 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	zsys_ddl_smsg_procdeath_def *spdmsg = &smsg->u_z_msg.z_procdeath;
 	short anyfile = -1;
 	__int32_t len32 = 0;
+
+	snprintf(searchDefine, sizeof(searchDefine), "=%s", search_define);
 
 	if (strcasecmp(argv[0], "param") == 0) {
 		char *arg;
@@ -675,7 +679,15 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		printf("launch_proc Could not find blank or slash\n");
 		return PROCDEATH_PREMATURE;
 	}
-	strcpy(cmd, bptr); /* cmdname /in file, out file/ arg1, arg2, argn */
+
+	error = FILENAME_RESOLVE_(bptr, (short) strlen(bptr), //
+			cmd, (short) sizeof(cmd), &cmdLen,,,, //
+			searchDefine, (short) strlen(searchDefine));
+	if (error) {
+		strcpy(cmd, bptr); /* cmdname /in file, out file/ arg1, arg2, argn */
+	} else {
+		cmd[cmdLen] = '\0';
+	}
 	if (ISDB(DB_BASIC))
 		printf("launch_proc cmd = '%s' at 0x%x\n", cmd, cmd);
 
