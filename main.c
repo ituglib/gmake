@@ -49,6 +49,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #endif
 #ifdef _GUARDIAN_TARGET
 # include "tandem.h"
+char *strdup(const char *);
 #endif
 #ifdef _AMIGA
 int __stack = 20000; /* Make sure we have 20K of stack space */
@@ -273,7 +274,7 @@ static const int inf_jobs = 0;
 static char *jobserver_auth = NULL;
 
 #if defined _GUARDIAN_TARGET
-char *search_define = "PMSEARCHLIST";
+char *search_define = NULL;
 #endif
 
 /* Handle for the mutex used on Windows to synchronize output of our
@@ -1098,6 +1099,7 @@ main (int argc, char **argv, char **envp)
 #if defined _GUARDIAN_TARGET
   tandem_initialize();
   legacy_cc = getenv("LEGACY-CC") && (strcmp(getenv("LEGACY-CC"), "1") == 0);
+  search_define = strdup("PMSEARCHLIST");
 #endif
 
   /* Useful for attaching debuggers, etc.  */
