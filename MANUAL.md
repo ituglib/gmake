@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 21 March 2022, was written for the 4.3g5
+This edition, last updated on 21 April 2022, was written for the 4.3g6
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -40,6 +40,18 @@ might occur out of necessity for variants to support NonStop GUARDIAN interfaces
 and APIs.
 
 ## Variations from GNU Make
+
+### Command Options
+
+The `--legacy-cc` option, or `PARAM LEGACY-CC 1` will cause the original GMAKE
+port behaviour to be used, where `CC=1` will always be considered an ignored
+warning. Otherwise, a non-zero completion code is considered an error.
+
+The `--search-define=define-name` specifies the name of a CLASS SEARCH DEFINE
+variable GMAKE uses for resolving program file names. If unspecified, the SEARCH
+DEFINE is assumed to be named `=PMSEARCHLIST`. Do not specify the extra `=`
+character when using this command option. GMAKE will look for any unqualified
+file names using the sub-volumes specified in this SEARCH DEFINE.
 
 ### Interpretation
 
@@ -375,6 +387,9 @@ names, for example:
 
     $SYSTEM.SYSTEM.TAL/IN source,OUT $s.#hold/
 
+Object file names can be unqualified if a CLASS SEARCH DEFINE is provided to
+GMAKE as described above.
+
 Each step in a recipe must be an executable program that can be run directly.
 If you need to run a TACL MACRO, you must use TACL explicitly with the MACRO
 run through an `IN` file. The following run options are currently supported and
@@ -450,7 +465,7 @@ The following extensions are currently defined for GMake:
 Appendix A GNU Free Documentation License
 Version 1.3, 3 November 2008
 
-Copyright © 2000, 2001, 2002, 2007, 2008 Free Software Foundation, Inc.
+Copyright �� 2000, 2001, 2002, 2007, 2008 Free Software Foundation, Inc.
 https://fsf.org/
 
 Everyone is permitted to copy and distribute verbatim copies
@@ -470,7 +485,7 @@ This License applies to any manual or other work, in any medium, that contains a
 
 A "Modified Version" of the Document means any work containing the Document or a portion of it, either copied verbatim, or with modifications and/or translated into another language.
 
-A "Secondary Section" is a named appendix or a front-matter section of the Document that deals exclusively with the relationship of the publishers or authors of the Document to the Documentâ€™s overall subject (or to related matters) and contains nothing that could fall directly within that overall subject. (Thus, if the Document is in part a textbook of mathematics, a Secondary Section may not explain any mathematics.) The relationship could be a matter of historical connection with the subject or with related matters, or of legal, commercial, philosophical, ethical or political position regarding them.
+A "Secondary Section" is a named appendix or a front-matter section of the Document that deals exclusively with the relationship of the publishers or authors of the Document to the Document��������s overall subject (or to related matters) and contains nothing that could fall directly within that overall subject. (Thus, if the Document is in part a textbook of mathematics, a Secondary Section may not explain any mathematics.) The relationship could be a matter of historical connection with the subject or with related matters, or of legal, commercial, philosophical, ethical or political position regarding them.
 
 The "Invariant Sections" are certain Secondary Sections whose titles are designated, as being those of Invariant Sections, in the notice that says that the Document is released under this License. If a section does not fit the above definition of Secondary then it is not allowed to be designated as Invariant. The Document may contain zero Invariant Sections. If the Document does not identify any Invariant Sections then there are none.
 
@@ -480,7 +495,7 @@ A "Transparent" copy of the Document means a machine-readable copy, represented 
 
 Examples of suitable formats for Transparent copies include plain ASCII without markup, Texinfo input format, LaTeX input format, SGML or XML using a publicly available DTD, and standard-conforming simple HTML, PostScript or PDF designed for human modification. Examples of transparent image formats include PNG, XCF and JPG. Opaque formats include proprietary formats that can be read and edited only by proprietary word processors, SGML or XML for which the DTD and/or processing tools are not generally available, and the machine-generated HTML, PostScript or PDF produced by some word processors for output purposes only.
 
-The "Title Page" means, for a printed book, the title page itself, plus such following pages as are needed to hold, legibly, the material this License requires to appear in the title page. For works in formats which do not have any title page as such, "Title Page" means the text near the most prominent appearance of the workâ€™s title, preceding the beginning of the body of the text.
+The "Title Page" means, for a printed book, the title page itself, plus such following pages as are needed to hold, legibly, the material this License requires to appear in the title page. For works in formats which do not have any title page as such, "Title Page" means the text near the most prominent appearance of the work��������s title, preceding the beginning of the body of the text.
 
 The "publisher" means any person or entity that distributes copies of the Document to the public.
 
@@ -496,7 +511,7 @@ You may also lend copies, under the same conditions stated above, and you may pu
 
 ### 3. COPYING IN QUANTITY
 
-If you publish printed copies (or copies in media that commonly have printed covers) of the Document, numbering more than 100, and the Documentâ€™s license notice requires Cover Texts, you must enclose the copies in covers that carry, clearly and legibly, all these Cover Texts: Front-Cover Texts on the front cover, and Back-Cover Texts on the back cover. Both covers must also clearly and legibly identify you as the publisher of these copies. The front cover must present the full title with all words of the title equally prominent and visible. You may add other material on the covers in addition. Copying with changes limited to the covers, as long as they preserve the title of the Document and satisfy these conditions, can be treated as verbatim copying in other respects.
+If you publish printed copies (or copies in media that commonly have printed covers) of the Document, numbering more than 100, and the Document��������s license notice requires Cover Texts, you must enclose the copies in covers that carry, clearly and legibly, all these Cover Texts: Front-Cover Texts on the front cover, and Back-Cover Texts on the back cover. Both covers must also clearly and legibly identify you as the publisher of these copies. The front cover must present the full title with all words of the title equally prominent and visible. You may add other material on the covers in addition. Copying with changes limited to the covers, as long as they preserve the title of the Document and satisfy these conditions, can be treated as verbatim copying in other respects.
 
 If the required texts for either cover are too voluminous to fit legibly, you should put the first ones listed (as many as fit reasonably) on the actual cover, and continue the rest onto adjacent pages.
 
@@ -514,7 +529,7 @@ You may copy and distribute a Modified Version of the Document under the conditi
   4. Preserve all the copyright notices of the Document.
   5. Add an appropriate copyright notice for your modifications adjacent to the other copyright notices.
   6. Include, immediately after the copyright notices, a license notice giving the public permission to use the Modified Version under the terms of this License, in the form shown in the Addendum below.
-  7. Preserve in that license notice the full lists of Invariant Sections and required Cover Texts given in the Documentâ€™s license notice.
+  7. Preserve in that license notice the full lists of Invariant Sections and required Cover Texts given in the Document��������s license notice.
   8. Include an unaltered copy of this License.
   9. Preserve the section Entitled "History", Preserve its Title, and add to it an item stating at least the title, year, new authors, and publisher of the Modified Version as given on the Title Page. If there is no section Entitled "History" in the Document, create one stating the title, year, authors, and publisher of the Document as given on its Title Page, then add an item describing the Modified Version as stated in the previous sentence.
   10. Preserve the network location, if any, given in the Document for public access to a Transparent copy of the Document, and likewise the network locations given in the Document for previous versions it was based on. These may be placed in the "History" section. You may omit a network location for a work that was published at least four years before the Document itself, or if the original publisher of the version it refers to gives permission.
@@ -524,9 +539,9 @@ You may copy and distribute a Modified Version of the Document under the conditi
   14. Do not retitle any existing section to be Entitled "Endorsements" or to conflict in title with any Invariant Section.
   15. Preserve any Warranty Disclaimers.
 
-If the Modified Version includes new front-matter sections or appendices that qualify as Secondary Sections and contain no material copied from the Document, you may at your option designate some or all of these sections as invariant. To do this, add their titles to the list of Invariant Sections in the Modified Versionâ€™s license notice. These titles must be distinct from any other section titles.
+If the Modified Version includes new front-matter sections or appendices that qualify as Secondary Sections and contain no material copied from the Document, you may at your option designate some or all of these sections as invariant. To do this, add their titles to the list of Invariant Sections in the Modified Version��������s license notice. These titles must be distinct from any other section titles.
 
-You may add a section Entitled "Endorsements", provided it contains nothing but endorsements of your Modified Version by various partiesâ€”for example, statements of peer review or that the text has been approved by an organization as the authoritative definition of a standard.
+You may add a section Entitled "Endorsements", provided it contains nothing but endorsements of your Modified Version by various parties��������for example, statements of peer review or that the text has been approved by an organization as the authoritative definition of a standard.
 
 You may add a passage of up to five words as a Front-Cover Text, and a passage of up to 25 words as a Back-Cover Text, to the end of the list of Cover Texts in the Modified Version. Only one passage of Front-Cover Text and one of Back-Cover Text may be added by (or through arrangements made by) any one entity. If the Document already includes a cover text for the same cover, previously added by you or by arrangement made by the same entity you are acting on behalf of, you may not add another; but you may replace the old one, on explicit permission from the previous publisher that added the old one.
 
@@ -548,9 +563,9 @@ You may extract a single document from such a collection, and distribute it indi
 
 ### 7. AGGREGATION WITH INDEPENDENT WORKS
 
-A compilation of the Document or its derivatives with other separate and independent documents or works, in or on a volume of a storage or distribution medium, is called an "aggregate" if the copyright resulting from the compilation is not used to limit the legal rights of the compilationâ€™s users beyond what the individual works permit. When the Document is included in an aggregate, this License does not apply to the other works in the aggregate which are not themselves derivative works of the Document.
+A compilation of the Document or its derivatives with other separate and independent documents or works, in or on a volume of a storage or distribution medium, is called an "aggregate" if the copyright resulting from the compilation is not used to limit the legal rights of the compilation��������s users beyond what the individual works permit. When the Document is included in an aggregate, this License does not apply to the other works in the aggregate which are not themselves derivative works of the Document.
 
-If the Cover Text requirement of section 3 is applicable to these copies of the Document, then if the Document is less than one half of the entire aggregate, the Documentâ€™s Cover Texts may be placed on covers that bracket the Document within the aggregate, or the electronic equivalent of covers if the Document is in electronic form. Otherwise they must appear on printed covers that bracket the whole aggregate.
+If the Cover Text requirement of section 3 is applicable to these copies of the Document, then if the Document is less than one half of the entire aggregate, the Document��������s Cover Texts may be placed on covers that bracket the Document within the aggregate, or the electronic equivalent of covers if the Document is in electronic form. Otherwise they must appear on printed covers that bracket the whole aggregate.
 
 ### 8. TRANSLATION
 
@@ -572,7 +587,7 @@ Termination of your rights under this section does not terminate the licenses of
 
 The Free Software Foundation may publish new, revised versions of the GNU Free Documentation License from time to time. Such new versions will be similar in spirit to the present version, but may differ in detail to address new problems or concerns. See https://www.gnu.org/copyleft/.
 
-Each version of the License is given a distinguishing version number. If the Document specifies that a particular numbered version of this License "or any later version" applies to it, you have the option of following the terms and conditions either of that specified version or of any later version that has been published (not as a draft) by the Free Software Foundation. If the Document does not specify a version number of this License, you may choose any version ever published (not as a draft) by the Free Software Foundation. If the Document specifies that a proxy can decide which future versions of this License can be used, that proxyâ€™s public statement of acceptance of a version permanently authorizes you to choose that version for the Document.
+Each version of the License is given a distinguishing version number. If the Document specifies that a particular numbered version of this License "or any later version" applies to it, you have the option of following the terms and conditions either of that specified version or of any later version that has been published (not as a draft) by the Free Software Foundation. If the Document does not specify a version number of this License, you may choose any version ever published (not as a draft) by the Free Software Foundation. If the Document specifies that a proxy can decide which future versions of this License can be used, that proxy��������s public statement of acceptance of a version permanently authorizes you to choose that version for the Document.
 
 ### 11. RELICENSING
 

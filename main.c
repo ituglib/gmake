@@ -272,6 +272,10 @@ static const int inf_jobs = 0;
 
 static char *jobserver_auth = NULL;
 
+#if defined _GUARDIAN_TARGET
+char *search_define = "PMSEARCHLIST";
+#endif
+
 /* Handle for the mutex used on Windows to synchronize output of our
    children under -O.  */
 
@@ -473,6 +477,7 @@ static const struct command_switch switches[] =
     { CHAR_MAX+9, string, &jobserver_auth, 1, 0, 0, 0, 0, "jobserver-fds" },
 #if defined _GUARDIAN_TARGET
     { CHAR_MAX+10, flag, &legacy_cc, 1, 1, 0, 0, 0, "legacy-cc" },
+    { CHAR_MAX+11, string, &search_define, 1, 1, 0, 0, 0, "search-define" },
 #endif
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
   };

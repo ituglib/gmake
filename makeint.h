@@ -695,6 +695,7 @@ extern int not_parallel, second_expansion, clock_skew_detected;
 extern int rebuilding_makefiles, one_shell, output_sync, verify_flag;
 #if defined _GUARDIAN_TARGET
 extern int legacy_cc;
+extern char *search_define;
 #endif
 
 extern const char *default_shell;
