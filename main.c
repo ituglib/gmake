@@ -2917,6 +2917,7 @@ decode_switches (int argc, const char **argv, int env)
                 {
                 default:
                   abort ();
+                  break;
 
                 case ignore:
                   break;
