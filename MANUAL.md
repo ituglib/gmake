@@ -10,12 +10,12 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 21 April 2022, was written for the 4.3g6
+This edition, last updated on 27 January 2023, was written for the 4.3g7
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
 
-Copyright &copy; 2020-2022, ITUGLIB Engineering Team. Permission is granted to
+Copyright &copy; 2020-2023, ITUGLIB Engineering Team. Permission is granted to
 copy, distribute and/or modify this document under the terms of the GNU Free
 Documentation License, Version 1.3 or any later version published by the
 Free Software Foundation; with no Invariant Sections, with the Front-Cover
