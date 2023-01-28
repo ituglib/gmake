@@ -504,6 +504,7 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	short anyfile = -1;
 	__int32_t len32 = 0;
 
+	strcpy(sethometerm, "");
 	snprintf(searchDefine, sizeof(searchDefine), "=%s", search_define);
 
 	if (strcasecmp(argv[0], "param") == 0) {
@@ -1029,8 +1030,11 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			ZSYS_VAL_PCREATOPT_DEFOVERRIDE;
 	plist.program_name = cmd;
 	plist.program_name_len = (long) strlen(cmd);
-	plist.hometerm_name = sethometerm;
-	plist.hometerm_name_len = (long) strlen(sethometerm);
+	// Set home term only if specified by the recipe command line
+	if (strlen(sethometerm) > 0) {
+		plist.hometerm_name = sethometerm;
+		plist.hometerm_name_len = (long) strlen(sethometerm);
+	}
 	error = PROCESS_LAUNCH_((void *) &plist, &errordet, (void *) &olist,
 			sizeof(olist), &olistlen);
 	if (error) {

@@ -358,12 +358,12 @@
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "GNU make TNS/E"
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU make 4.3g6 TNS/E"
+#define PACKAGE_STRING "GNU make 4.3g7 TNS/E"
 #elif defined (_TNS_X_TARGET)
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "GNU make TNS/X"
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU make 4.3g6 TNS/X"
+#define PACKAGE_STRING "GNU make 4.3g7 TNS/X"
 #endif
 
 /* Define to the one symbol short name of this package. */
@@ -373,7 +373,7 @@
 #define PACKAGE_URL "http://www.gnu.org/software/make/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3g6"
+#define PACKAGE_VERSION "4.3g7"
 
 /* Define to the character that separates directories in PATH. */
 #define PATH_SEPARATOR_CHAR ':'
@@ -440,7 +440,7 @@
 
 
 /* Version number of package */
-#define VERSION "4.3g6"
+#define VERSION "4.3g7"
 
 /* Use platform specific coding */
 /* #undef WINDOWS32 */
