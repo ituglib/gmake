@@ -3,15 +3,20 @@
 # Copyright (c) 2020 Randall S. Becker
 #
 
+-include ../MAKE-BUILD-OPTIONS
+-include ../MAKE-BUILD-OPTIONS.$(shell uname -n)
+
 DEST ?= .
 SHELL_PATH ?= $(SHELL)
 TEST_SHELL_PATH ?= $(SHELL_PATH)
 TAR ?= $(TAR)
 RM ?= /bin/rm -f
 DEFAULT_TEST_TARGET ?= test
-HELPERS = 
+HELPERS = $(TANDEM_EXT_HELPER)
+INCLUDES=-I.. -I/G/system/zsysdefs
 LDFLAGS=-g
 CC=c99
+CFLAGS=-g -O0 -DUNIT_TEST -Wextensions -Wsystype=guardian $(INCLUDES)
 SED=sed
 FGREP=fgrep
 
@@ -71,5 +76,8 @@ aggregate-results:
 	$(FGREP) CUNIT_CLEANUP $< | \
 		$(SED) '1,$$s/CUNIT_CLEANUP\([^(]*\).*$$/\t\1();/' >> $@
 	@echo "// End Generated Test List" >> $@
+
+$(TANDEM_EXT_HELPER): tandem_ext.c ../tandem_ext.c
+	$(CC) $(CFLAGS) $< -o $@
 
 .PHONY: pre-clean $(T) aggregate-results clean

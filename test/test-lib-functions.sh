@@ -1042,6 +1042,16 @@ launch_make() {
 	PWD=$use_pwd gtacl -s -p ${PRODUCT_BUILD} $*
 }
 
+launch_helper() {
+	use_pwd="$TEST_GUARDIAN_DIR"
+	if [ -n "$TEST_GUARDIAN_DIR_ALT" ]; then
+		use_pwd="$TEST_GUARDIAN_DIR_ALT"
+	fi
+	prog=$1
+	shift
+	PWD=$use_pwd gtacl -s -p $prog $*
+}
+
 launch_c() {
 	use_pwd="$TEST_GUARDIAN_DIR"
 	if [ -n "$TEST_GUARDIAN_DIR_ALT" ]; then
