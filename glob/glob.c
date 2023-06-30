@@ -159,6 +159,10 @@ extern void abort (), exit ();
 
 #endif	/* Standard headers.  */
 
+#if defined _GUARDIAN_TARGET
+extern char *toOss(char *ossName, size_t ossNameLength, const char *guardianName);
+#endif
+
 #ifndef	ANSI_STRING
 
 # ifndef bzero
@@ -382,7 +386,11 @@ glob (pattern, flags, errfunc, pglob)
 
   /* POSIX requires all slashes to be matched.  This means that with
      a trailing slash we must match only directories.  */
+#if defined _GUARDIAN_TARGET
+  if (pattern[0] && pattern[strlen (pattern) - 1] == '.')
+#else
   if (pattern[0] && pattern[strlen (pattern) - 1] == '/')
+#endif
     flags |= GLOB_ONLYDIR;
 
   if (flags & GLOB_BRACE)
@@ -513,7 +521,11 @@ glob (pattern, flags, errfunc, pglob)
     }
 
   /* Find the filename.  */
+#if defined _GUARDIAN_TARGET
+  filename = strrchr (pattern, '.');
+#else
   filename = strrchr (pattern, '/');
+#endif
 #if defined __MSDOS__ || defined WINDOWS32
   /* The case of "d:pattern".  Since `:' is not allowed in
      file names, we can safely assume that wherever it
@@ -596,6 +608,8 @@ glob (pattern, flags, errfunc, pglob)
           && dirname[dirlen - 1] != ':'
 	  && (dirlen < 3 || dirname[dirlen - 2] != ':'
 	      || dirname[dirlen - 1] != '/')
+#elif defined _GUARDIAN_TARGET
+	  && (dirname[dirlen - 1] != '.')
 #endif
 	  && dirlen > 1)
 	/* "pattern/".  Expand "pattern", appending slashes.  */
@@ -619,7 +633,11 @@ glob (pattern, flags, errfunc, pglob)
 #ifndef VMS
   if ((flags & (GLOB_TILDE|GLOB_TILDE_CHECK)) && dirname[0] == '~')
     {
+#ifdef _GUARDIAN_TARGET
+      if (dirname[1] == '\0' || dirname[1] == '.')
+#else
       if (dirname[1] == '\0' || dirname[1] == '/')
+#endif
 	{
 	  /* Look up home directory.  */
 #ifdef VMS
@@ -723,7 +741,11 @@ glob (pattern, flags, errfunc, pglob)
 # if !defined _AMIGA && !defined WINDOWS32 && !defined VMS
       else
 	{
+#if defined _GUARDIAN_TARGET
+   	  char *end_name = strchr (dirname, '.');
+#else
 	  char *end_name = strchr (dirname, '/');
+#endif
 	  const char *user_name;
 	  const char *home_dir;
 
@@ -981,7 +1003,11 @@ glob (pattern, flags, errfunc, pglob)
 			   filename, filename_len);
 #else
 		  memcpy (pglob->gl_pathv[pglob->gl_pathc], dir, dir_len);
+# if defined _GUARDIAN_TARGET
+		  pglob->gl_pathv[pglob->gl_pathc][dir_len] = '.';
+# else
 		  pglob->gl_pathv[pglob->gl_pathc][dir_len] = '/';
+# endif
 		  memcpy (&pglob->gl_pathv[pglob->gl_pathc][dir_len + 1],
 			  filename, filename_len);
 #endif
@@ -1046,7 +1072,11 @@ glob (pattern, flags, errfunc, pglob)
 		globfree (pglob);
 		return GLOB_NOSPACE;
 	      }
+#if defined _GUARDIAN_TARGET
+	    strcpy (&new[len - 2], ".");
+#else
 	    strcpy (&new[len - 2], "/");
+#endif
 	    pglob->gl_pathv[i] = new;
 	  }
     }
@@ -1117,6 +1147,9 @@ prefix_array (dirname, array, n)
   size_t dirlen = strlen (dirname);
 #if defined __MSDOS__ || defined WINDOWS32
   int sep_char = '/';
+# define DIRSEP_CHAR sep_char
+#elif defined _GUARDIAN_TARGET
+  int sep_char = '.';
 # define DIRSEP_CHAR sep_char
 #else
 # define DIRSEP_CHAR '/'
@@ -1226,7 +1259,9 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
      glob_t *pglob;
 {
   __ptr_t stream = NULL;
-
+#ifdef _GUARDIAN_TARGET
+  char ossDirectory[2049];
+#endif
   struct globlink
     {
       struct globlink *next;
@@ -1240,6 +1275,9 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
 #ifdef VMS
   if (*directory == 0)
     directory = "[]";
+#endif
+#ifdef _GUARDIAN_TARGET
+  toOss(ossDirectory, sizeof(ossDirectory), directory);
 #endif
   meta = __glob_pattern_p (pattern, !(flags & GLOB_NOESCAPE));
   if (meta == 0)
@@ -1264,7 +1302,11 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
 		   pattern, patlen + 1);
 # else
 	  memcpy (fullname, directory, dirlen);
+#  ifdef _GUARDIAN_TARGET
+	  fullname[dirlen] = '.';
+#  else
 	  fullname[dirlen] = '/';
+#  endif
 	  memcpy (&fullname[dirlen + 1], pattern, patlen + 1);
 # endif
 	  if (((flags & GLOB_ALTDIRFUNC)
@@ -1295,8 +1337,13 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
       else
 	{
 	  stream = ((flags & GLOB_ALTDIRFUNC)
+#if defined _GUARDIAN_TARGET
+		    ? (*pglob->gl_opendir) (ossDirectory)
+		    : (__ptr_t) opendir (ossDirectory));
+#else
 		    ? (*pglob->gl_opendir) (directory)
 		    : (__ptr_t) opendir (directory));
+#endif
 	  if (stream == NULL)
 	    {
 	      if (errno != ENOTDIR
