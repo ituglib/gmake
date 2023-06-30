@@ -10,7 +10,7 @@ of each out of date component. This port runs in the GUARDIAN personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 27 January 2023, was written for the 4.3g7
+This edition, last updated on 30 January 2023, was written for the 4.3g8
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -95,6 +95,44 @@ referencing targets.
 
 Many of the predefined rules in GNU Make have no effect in GMake because files
 in GUARDIAN have no file extensions.
+
+### Built-in Commands
+
+There are two built-ins that allow some compatibility with GNU Make semantics
+without having direct shell access: `echo`; and `rm`.
+
+#### `echo`
+
+The `echo` command prints out strings supplied on the command line. The syntax
+of the command is:
+
+    echo [ string ] ...
+
+`string` can be quoted with single or double quotes. The quotes are stripped off
+before being printed.
+
+The built-in `echo` command does not support any Guardian run options.
+
+#### `rm`
+
+The `rm` command removes files from a supplied set of patterns. This is more
+flexible than using `FUP`, which requires commas between sets of files. The
+syntax of the command is:
+
+    rm [ file-pattern | file-name ] ...
+
+`file-pattern` is a valid file pattern containing `*` and/or `?` wildcard
+characters. Any files matching the supplied pattern are removed. If the pattern
+does not match any existing files, no error is reported and no file is purged. 
+
+`file-name` is a valid file name without any wildcards. This argument is always
+assumed to match a file, so if the file does not exist, GMake reports an error
+`11` (not found).
+
+If a file cannot be purged, whether directly specified or matched via a pattern,
+the reason error code is reported. 
+ 
+The built-in `rm` command does not support any Guardian run options.
 
 ### Predefined Variables
 

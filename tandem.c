@@ -431,6 +431,7 @@ int main(int argc, char *argv[]) {
 
 /**
  * Return my process name as a string.
+ * @return the name of the process access id.
  */
 static char *my_paid(void) {
 	short pHandle[10];
@@ -442,6 +443,97 @@ static char *my_paid(void) {
 	myname[len] = '\0';
 	return myname;
 }
+
+/**
+ * Check whether a pattern has a wildcard specifier.
+ * @param filePattern the pattern to check.
+ * @return non-zero if there is a wildcard.
+ */
+static int has_wildcard(const char *filePattern) {
+	for (const char *s = filePattern; *s; s++) {
+		if (*s == '*' || *s == '?')
+			return 1;
+	}
+	return 0;
+}
+
+/**
+ * Rm built-in. Remove the set of specified file patterns. This terminates on the first error.
+ * @param files the list of files to remove, null terminated.
+ * @return the error found.
+ */
+static int process_rm(char **files) {
+	int error = 0;
+	int rc = 0;
+	for (size_t index = 0; files[index]; index++) {
+		if (has_wildcard(files[index])) {
+			short searchId = 0;
+			error = FILENAME_FINDSTART_(&searchId, files[index],
+					(short) strlen(files[index]));
+			if (error)
+				return error;
+			while (!error) {
+				char matchedName[ZSYS_VAL_LEN_FILENAME + 1];
+				short nameLength = 0;
+				error = FILENAME_FINDNEXT64_(searchId, matchedName,
+						(short) (sizeof(matchedName) + 1), &nameLength);
+				if (!error) {
+					matchedName[nameLength] = '\0';
+					rc = FILE_PURGE_(matchedName, (short) strlen(matchedName));
+					if (rc) {
+						printf("%s: Unable to purge. Error %d\n", matchedName,
+								rc);
+						break;
+					}
+				}
+			}
+			FILENAME_FINDFINISH_(searchId);
+			if (rc != 0)
+				break;
+		} else {
+			rc = FILE_PURGE_(files[index], (short) strlen(files[index]));
+			if (rc) {
+				printf("%s: Unable to purge. Error %d\n", files[index], rc);
+				break;
+			}
+		}
+	}
+	return rc;
+}
+
+
+/**
+ * Echo built-in. Report the set of strings to stdout.
+ * @param strings the set of strings, null terminated.
+ * @return 0.
+ */
+static int process_echo(char **strings) {
+	for (size_t index = 0; strings[index]; index++) {
+		char *s, *end;
+
+		if (index != 0) {
+			fputs(" ", stdout);
+		}
+		s = strings[index];
+		end = s + strlen(s);
+		if (*s == '"') {
+			if (end[-1] == '"') {
+				s++;
+				end[-1] = '\0';
+			}
+		} else if (*s == '\'') {
+			if (end[-1] == '\'') {
+				s++;
+				end[-1] = '\0';
+			}
+		}
+		fputs(s, stdout);
+	}
+	fputs("\n", stdout);
+	fflush(stdout);
+	return 0;
+}
+
 /*
  Launch a process to run the specified command...
 
@@ -575,6 +667,10 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			printf("Unknown clear option %s\n", argv[1]);
 			return PROCDEATH_PREMATURE;
 		}
+	} else if (strcmp(argv[0], "rm") == 0) {
+		return process_rm(argv+1);
+	} else if (strcmp(argv[0], "echo") == 0) {
+		return process_echo(argv+1);
 	}
 
 	smt = (startup_msg_type *) malloc(sizeof(startup_msg_type));
