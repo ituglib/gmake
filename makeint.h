@@ -651,6 +651,10 @@ char *getwd ();
 
 #endif  /* Not GNU C library or POSIX.  */
 
+#ifdef _GUARDIAN_TARGET
+extern char *toOss(char *ossName, size_t ossNameLength, const char *guardianName); // in tandem_ext.c
+#endif
+
 #if !HAVE_STRCASECMP
 # if HAVE_STRICMP
 #  define strcasecmp stricmp

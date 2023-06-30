@@ -1,12 +1,12 @@
-# GMake - GNU Make GUARDIAN Port Manual
+# GMake - GNU Make Guardian Port Manual
 
-This manual describes the GNU Make GUARDIAN port extensions and differences
+This manual describes the GNU Make Guardian port extensions and differences
 from the main GNU Make program. The [GNU Make Manual](https://www.gnu.org/software/make/manual/make.html)
 describes the program in detail. This manual describes only the extensions.
 
 GMake is a program for automatically determining which parts of software
 programs need to be recompiled and runs the commands to perform the compilation
-of each out of date component. This port runs in the GUARDIAN personality of
+of each out of date component. This port runs in the Guardian personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
@@ -19,7 +19,7 @@ Copyright &copy; 2020-2023, ITUGLIB Engineering Team. Permission is granted to
 copy, distribute and/or modify this document under the terms of the GNU Free
 Documentation License, Version 1.3 or any later version published by the
 Free Software Foundation; with no Invariant Sections, with the Front-Cover
-Texts being "GMake - GNU Make GUARDIAN Port Manual". A copy of the license is
+Texts being "GMake - GNU Make Guardian Port Manual". A copy of the license is
 included in the section entitled "GNU Free Documentation License."
 
 ## Overview
@@ -36,7 +36,7 @@ has been handled by Randall S. Becker of the ITUGLIB Engineering Team, part of
 the Connect Community, with time donated by Nexbridge Inc.
 
 GMake conforms to section 6.2 of IEEE Standard 1003.2-1992 (POSIX.2) except as
-might occur out of necessity for variants to support NonStop GUARDIAN interfaces
+might occur out of necessity for variants to support NonStop Guardian interfaces
 and APIs.
 
 ## Variations from GNU Make
@@ -55,15 +55,15 @@ file names using the sub-volumes specified in this SEARCH DEFINE.
 
 ### Interpretation
 
-Because the GUARDIAN operating system is case insensitive, file name
+Because the Guardian operating system is case insensitive, file name
 interpretation may have issues. File `a` is interpreted as equivalent to `A`
 by GMake.
 
 Special characters, like `\` and `$` have special meaning in
-GUARDIAN file names. Node names may not be interpreted correctly and should
+Guardian file names. Node names may not be interpreted correctly and should
 be avoided or tested before use.
 
-`$` values in GUARDIAN refer to disk volumes. The use of `$` should be clearly
+`$` values in Guardian refer to disk volumes. The use of `$` should be clearly
 disambiguated from GMake variables using `()` characters.
 
 ### Variable Substitution
@@ -75,12 +75,12 @@ Variables in GNU Make are referenced with using either of the following forms:
 
 In GMake, the first format, a `$` followed by a letter, is not interpreted as
 a variable. Instead, all tokens represented by a `$` followed by letters are
-considered to be disk volumes in the GUARDIAN space. The `$V` form should not
+considered to be disk volumes in the Guardian space. The `$V` form should not
 be used. The `$(VARIABLE)` form should be used for all variable references.
 
 ### Special Variables
 
-GUARDIAN MAP DEFINE values, if they are in the GMake process context, can be
+Guardian MAP DEFINE values, if they are in the GMake process context, can be
 referenced using the form:
 
     $=DEFINE
@@ -94,7 +94,7 @@ referencing targets.
 ### Predefined Rules
 
 Many of the predefined rules in GNU Make have no effect in GMake because files
-in GUARDIAN have no file extensions.
+in Guardian have no file extensions.
 
 ### Built-in Commands
 
@@ -137,7 +137,7 @@ The built-in `rm` command does not support any Guardian run options.
 ### Predefined Variables
 
 Many of the predefined variables in GNU Make have no effect in GMake because
-files in GUARDIAN have no file extensions.
+files in Guardian have no file extensions.
 
 The `$*` predefined has no meaning in GMake.
 
@@ -145,19 +145,33 @@ Any of the `$(@D)` or `$(@F)` predefines have no meaning in GMake.
 
 Other substitution forms may also not work in GMake.
 
+### Predefined Functions
+
+Many of the predefined functions are not appropriate in the Guardian space. This
+section describes specific limitations but is not necessarily complete.
+
+The `$(wildcard pattern)` function works for Guardian file name patterns. The
+patterns must be fully-qualified optionally including the Expand node name and
+must resolve to file names only. An example of this function usage is:
+
+    $(wildcard $data01.mysubvol.file*)
+
+The semantics of the pattern specifications of `*` and `?` are the same as for
+the standard GNU Make.  
+
 ## Building GMAKE
 
 `GMAKE` is build in OSS using `/usr/coreutils/bin/make`.
 
 ### L-Series
 
-To build on L-Series, use make, and specify a GUARDIAN target file.
+To build on L-Series, use make, and specify a Guardian target file.
 
     make -f Makefile.NSX.OSS GMAKE_EXE=/G/.../.../gmake
 
 ### J-Series
 
-To build on J-Series, use make, and specify a GUARDIAN target file.
+To build on J-Series, use make, and specify a Guardian target file.
 
     make -f Makefile.NSE.OSS GMAKE_EXE=/G/.../.../gmake
 
@@ -176,7 +190,7 @@ and `CFLAGS` to point to that file by turning off the `-D OMIT_PSVGT`.
 ### Load Handling
 
 The `GMAKE` program handles the `load` and `-load` commands slightly
-differently from standard GNU Make. On GUARDIAN, the separator is assumed to
+differently from standard GNU Make. On Guardian, the separator is assumed to
 be `.` instead of `/`.
  
 ### Error Handling
@@ -257,7 +271,7 @@ individual functions before committing to their use.
 
 #### `$(add_define define-attributes)`
 
-The `add_define` function adds a GUARDIAN define into the process context of
+The `add_define` function adds a Guardian define into the process context of
 the GMake process. The added DEFINE is usable as a DEFINE variable in rules and
 recipes. It is also passed to any process started by the GMake process. DEFINE
 names always must begin with an `=` followed by a combination of 1 to 24
@@ -282,7 +296,7 @@ reasons.
 
 #### `$(delete_define define|**)`
 
-The `delete_define` function removes one or all GUARDIAN DEFINES in the PFS
+The `delete_define` function removes one or all Guardian DEFINES in the PFS
 of the GMake process.
 
 `$(delete_define =define)` removes a specific DEFINE. No error is reported
@@ -296,7 +310,7 @@ reasons.
 
 #### `$(assign name,file)`
 
-The `assign` function adds a GUARDIAN `ASSIGN` to the process context. The
+The `assign` function adds a Guardian `ASSIGN` to the process context. The
 initial set of `ASSIGN` values are loaded when GMAKE starts. This function can
 modify or add an `ASSIGN`.
 
@@ -312,7 +326,7 @@ See also `$(clear_assign)` below.
 
 #### `$(clear_assign name)`
 
-The `clear_assign` function removes one or all GUARDIAN `ASSIGNs` from the
+The `clear_assign` function removes one or all Guardian `ASSIGNs` from the
 process context. If `name` is `*`, all `ASSIGNs` are removed. If the specified
 `ASSIGN` does not exist, no error is reported.
 
@@ -335,7 +349,7 @@ positive integer. _units_ can be one of: **microseconds** (the default);
 
 #### `$(param name value)`
 
-The `param` function adds a GUARDIAN `PARAM` to the process context. The
+The `param` function adds a Guardian `PARAM` to the process context. The
 initial set of `PARAM` values are loaded when GMAKE starts. This function can
 modify or add a `PARAM`.
 
@@ -351,7 +365,7 @@ See also `$(clear_param)` below.
 
 #### `$(clear_param name)`
 
-The `clear_param` function removes one or all GUARDIAN `PARAMs` from the
+The `clear_param` function removes one or all Guardian `PARAMs` from the
 process context. If `name` is `*`, all `PARAMs` are removed. If the specified
 param does not exist, no error is reported.
 
@@ -367,10 +381,10 @@ and setting `PARAMs` should be specified before running programs in a recipe.
 
 #### `$(pname file)`
 
-The `pname` function converts a GUARDIAN file name into an OSS path. The
-GUARDIAN name can be fully or partially qualified and does not need to exist.
+The `pname` function converts a Guardian file name into an OSS path. The
+Guardian name can be fully or partially qualified and does not need to exist.
 The resulting OSS path will always be fully qualified. If the EXPAND node in
-the GUARDIAN name is the same as the local node, the OSS path starts with `/G`,
+the Guardian name is the same as the local node, the OSS path starts with `/G`,
 otherwise the OSS path starts with `/E`. The function is similar to the OSS
 command `pname -s guardian-file`.
 
@@ -494,7 +508,7 @@ be specified in upper case, but that is not required.
 
 The following extensions are currently defined for GMake:
 
-* GUARDIAN DEFINE variable expansion.
+* Guardian DEFINE variable expansion.
 * Program execution using `PROCESS_LAUNCH_` instead of shell.
 * Recognition of disk and process names instead of single character variables.
 

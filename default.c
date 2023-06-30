@@ -119,6 +119,8 @@ static struct pspec default_terminal_rules[] =
     /* SCCS.  */
         /* ain't no SCCS on vms */
 
+#elifdef _GUARDIAN_TARGET
+    /* No RCS or SCCS rules in Guardian */
 #else
     /* RCS.  */
     { "%", "%,v",
