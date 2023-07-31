@@ -82,7 +82,7 @@ pipeline {
                         'BASENAME=gmake',
                         'GHOME=/G/sas22/randall',
                         'DEST=/home/ituglib/randall/stage',
-                        'REMOTE=-oPort=29284 randall@tcmvns.tcmsupport.com',
+                        'REMOTE=-oPort=49284 randall@tcmvns.tcmsupport.com',
                         'REMOTE_DEST=/web/stage']) {
                     sh 'export INSTALL_LOCATION="${GHOME}/" && export VERSION_PATH="${INSTALL_LOCATION}/gmake" && . ${WORKSPACE}/../Ituglib_Build/dist.info.nsx && TESTV=`echo $VERSION | fgrep -e -rc`;if [ "$TESTV" != "" ]; then echo "Development Version Suppressed"; else echo "put $DEST/${BASENAME}-* $REMOTE_DEST" | /G/system/zssh/sftposs $REMOTE; fi'
                     sh 'rm ${DEST}/${BASENAME}-*'
