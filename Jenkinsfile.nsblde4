@@ -84,7 +84,7 @@ pipeline {
                         'DEST=/home/ituglib/randall/stage',
                         'REMOTE=-oPort=49284 randall@tcmvns.tcmsupport.com',
                         'REMOTE_DEST=/web/stage']) {
-                    sh 'export INSTALL_LOCATION="${GHOME}/" && export VERSION_PATH="${INSTALL_LOCATION}/gmake" && . ${WORKSPACE}/../Ituglib_Build/dist.info.nse && TESTV=`echo $VERSION | fgrep -e -rc`;if [ "$TESTV" != "" ]; then echo "Development Version Suppressed"; else echo "put $DEST/${BASENAME}-* $REMOTE_DEST" | /G/system/zssh/sftposs $REMOTE; fi'
+                    sh 'export INSTALL_LOCATION="${GHOME}/" && export VERSION_PATH="${INSTALL_LOCATION}/gmake" && . ${WORKSPACE}/../Ituglib_Build/dist.info.nse && TESTV=`echo $VERSION | fgrep -e -rc`;if [ "$TESTV" != "" ]; then echo "Development Version Suppressed"; else echo "put $DEST/${BASENAME}-* $REMOTE_DEST" | /G/system/zssh/sftposs $REMOTE 2>&1; fi'
                     sh 'rm ${DEST}/${BASENAME}-*'
                 }
             }
