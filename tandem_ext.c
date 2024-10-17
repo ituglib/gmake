@@ -493,7 +493,7 @@ int stat(const char *pathname, struct stat *st)
 #endif /* ! UNIT_TEST */
 
 /*===========================================================================*/
-#pragma page "T0593 GUARDIAN GNU Make- tandem_ext.c Change Descriptions"
+#pragma page "T1196 GUARDIAN GNU Make- tandem_ext.c Change Descriptions"
 /*===========================================================================*/
 
 /*

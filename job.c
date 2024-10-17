@@ -3821,7 +3821,7 @@ dup2 (int old, int new)
 #endif
 
 /*===========================================================================*/
-#pragma page "T0593 GUARDIAN GNU Make- sjobc Change Descriptions"
+#pragma page "T1196 GUARDIAN GNU Make- sjobc Change Descriptions"
 /*===========================================================================*/
 
 /*

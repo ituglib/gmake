@@ -1,7 +1,7 @@
-#pragma PAGE "T0593 sverc: version procedures"
+#pragma PAGE "T1196 sverc: version procedures"
 
 #pragma section VERSION_STRING
-#define VERSION_STRING "T0593H01 - (01FEB2015)" __DATE__ __TIME__
+#define VERSION_STRING "T1196L01 - (17OCT2024)" __DATE__ __TIME__
 
 #pragma section CHANGES
 /* Begin change descriptons

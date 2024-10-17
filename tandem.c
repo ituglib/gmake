@@ -1575,7 +1575,7 @@ char *resolve_subvolume(char *path) {
 
 
 /*===========================================================================*/
-#pragma page "T0593 GUARDIAN GNU Make- tandem.c Change Descriptions"
+#pragma page "T1196 GUARDIAN GNU Make- tandem.c Change Descriptions"
 /*===========================================================================*/
 
 /*
