@@ -33,7 +33,7 @@ const char *make_host = MAKE_HOST;
  */
 #ifdef _GUARDIAN_TARGET
 #pragma section VERSION_STRING
-#define VERSION_STRING "T0593H01 - (30SEP2020)" __DATE__ __TIME__
+#define VERSION_STRING "T1196L01 - (17OCT2024)" __DATE__ __TIME__
 
 #pragma section VERSION_GMAKE
 void VPROC (void)

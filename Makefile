@@ -2,7 +2,7 @@
 # for product builds.
 # DO NOT DELETE THIS LINE -- make depend uses it
 
-VPROC=$(shell sh ./version.sh)
+VPROC=$(shell sh ./version.sh MAIN L01)
 
 # Set the systype flag.
 SYSTYPE_FLAG = 
