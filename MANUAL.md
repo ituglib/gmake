@@ -258,7 +258,7 @@ The following predefined variables are added to GMake:
 | `SQLCOMP`  | `$(SYSVOL).SQLCOMP`  | SQLCOMP compiler program location.                        |
 | `SPOOLCOM` | `$(SYSVOL).SPOOLCOM` | SPOOLCOM program location.                                |
 | `VPROC`    | `$(SYSVOL).VPROC`     | VPROC utility program location.                           |
-| `NSGITVOL` | `$SYSTEM.NSGIT`       | Default NSGit installation subvolume                     |
+| `NSGITVOL` | `$SYSTEM.ZNSGIT`      | Default NSGit installation subvolume                     |
 | `GMAKEDEP` | `$(NSGITVOL).GMAKEDEP` | GMAKEDEP dependency generator program location.         |
 | `NSGIT`    | `$(NSGITVOL).NSGIT`   | NSGit program location.                                  |
 

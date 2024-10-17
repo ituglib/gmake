@@ -550,7 +550,7 @@ static const char *default_variables[] =
     "TOS_VERSION", tos_version,
     "TOS_VERSION_FULL", tos_version_full,
     "SYSVOL", "$SYSTEM.SYSTEM",
-    "NSGITVOL", "$SYSTEM.NSGIT",
+    "NSGITVOL", "$SYSTEM.ZNSGIT",
     "AR", "$(SYSVOL).AR",
     "ARFLAGS", "rv",
     "CC", "$(SYSVOL).C",
