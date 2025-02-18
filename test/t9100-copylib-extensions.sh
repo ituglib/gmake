@@ -91,6 +91,7 @@ test_expect_success COPYDLL 'retest compile - should not run' '
 '
 
 test_expect_success COPYDLL 'recompile - changed copy2 section C' '
+	sleep 2 &&
 	edit_loader copy2 <<-EOF > /dev/null &&
 a
 

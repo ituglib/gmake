@@ -14,6 +14,7 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "time64.h"
 #include "makeint.h"
 #include "os.h"
 #include "filedef.h"
@@ -3453,11 +3454,11 @@ print_version (void)
 static void
 print_data_base (void)
 {
-  time_t when = time ((time_t *) 0);
+  time64_t when = time64_ext ((time64_t *) 0);
 
   print_version ();
 
-  printf (_("\n# Make data base, printed on %s"), ctime (&when));
+  printf (_("\n# Make data base, printed on %s"), ctime64_ext (&when));
 
   print_variable_data_base ();
   print_dir_data_base ();
@@ -3466,8 +3467,8 @@ print_data_base (void)
   print_vpath_data_base ();
   strcache_print_stats ("#");
 
-  when = time ((time_t *) 0);
-  printf (_("\n# Finished Make data base on %s\n"), ctime (&when));
+  when = time64_ext ((time64_t *) 0);
+  printf (_("\n# Finished Make data base on %s\n"), ctime64_ext (&when));
 }
 
 static void

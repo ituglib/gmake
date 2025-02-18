@@ -149,7 +149,7 @@ VMS_get_member_info(struct dsc$descriptor_s *module, unsigned long *rfa)
      VMS defectlet - mhddef is sub-optimal, for the time, it has a 32 bit
      longword, mhd$l_datim, and a 32 bit fill instead of two longwords, or
      equivalent. */
-  member_date = vms_time_to_unix(&mhd->mhd$l_datim);
+  member_date = vms_o_unix(&mhd->mhd$l_datim);
   free(mhd);
 
   /* Here we have a problem.  The module name on VMS does not have

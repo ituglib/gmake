@@ -54,6 +54,7 @@ objects = alloca.o  \
           strcache.o \
           tandem.o \
           tandem_ext.o \
+          time64.o \
           variable.o \
           version.o \
           vpath.o \
@@ -102,6 +103,7 @@ signame.o      : config.h
 strcache.o     : makeint.h hash.h
 tandem.o       : makeint.h
 tandem_ext.o   : makeint.h
+time64.o       : time64.c time64.h
 variable.o     : makeint.h config.h dep.h filedef.h job.h commands.h variable.h
 version.o      : config.h
 vpath.o        : makeint.h config.h filedef.h variable.h
