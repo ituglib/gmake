@@ -93,12 +93,12 @@ ar_member_date_1 (int desc UNUSED, const char *mem, int truncated,
 
 /* Return the modtime of NAME.  */
 
-time_t
+time64_t
 ar_member_date (const char *name)
 {
   char *arname;
   char *memname;
-  long int val;
+  int64_t val;
 
   ar_parse_name (name, &arname, &memname);
 
@@ -123,19 +123,31 @@ ar_member_date (const char *name)
   open_pobj_dll();
   open_copylib_dll();
   open_ddldict_dll();
-  if (IS_POBJ_ENABLED && is_pobj_func(arname))
-	val = pobj_scan_func (arname, pobj_member_date_1_func, memname);
-  else if (IS_COPYLIB_ENABLED && is_copylib_func(arname))
-	val = copylib_scan_func (arname, copylib_member_date_1_func, memname);
-  else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname))
-	val = ddldict_scan_func (arname, ddldict_member_date_1_func, memname);
-  else
+  if (IS_POBJ_ENABLED && is_pobj_func(arname)) {
+    if (pobj_member_date_64_func) {
+	  val = pobj_scan_64_func (arname, pobj_member_date_64_func, memname);
+    } else {
+  	  val = pobj_scan_func (arname, pobj_member_date_1_func, memname);
+    }
+  } else if (IS_COPYLIB_ENABLED && is_copylib_func(arname)) {
+    if (copylib_scan_64_func) {
+	  val = copylib_scan_64_func (arname, copylib_member_date_64_func, memname);
+    } else {
+  	  val = copylib_scan_func (arname, copylib_member_date_1_func, memname);
+    }
+  } else if (IS_DDLDICT_ENABLED && is_ddldict_func(arname)) {
+    if (ddldict_scan_64_func) {
+      val = ddldict_scan_64_func (arname, ddldict_member_date_64_func, memname);
+    } else {
+      val = ddldict_scan_func (arname, ddldict_member_date_1_func, memname);
+    }
+  } else
 #endif
   val = ar_scan (arname, ar_member_date_1, memname);
 
   free (arname);
 
-  return (val <= 0 ? (time_t) -1 : (time_t) val);
+  return (val <= 0 ? (time64_t) -1 : (time64_t) val);
 }
 
 /* Set the archive-member NAME's modtime to now.  */

@@ -169,7 +169,7 @@ int stemlen_compare (const void *v1, const void *v2);
     * 302 / 1000) \
    + 1 + 1 + 4 + 25)
 
-FILE_TIMESTAMP file_timestamp_cons (char const *, time_t, long int);
+FILE_TIMESTAMP file_timestamp_cons (char const *, time64_t, long int);
 FILE_TIMESTAMP file_timestamp_now (int *);
 void file_timestamp_sprintf (char *p, FILE_TIMESTAMP ts);
 

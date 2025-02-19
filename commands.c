@@ -632,9 +632,9 @@ delete_target (struct file *file, const char *on_behalf_of)
 #ifndef NO_ARCHIVES
   if (ar_name (file->name))
     {
-      time_t file_date = (file->last_mtime == NONEXISTENT_MTIME
-                          ? (time_t) -1
-                          : (time_t) FILE_TIMESTAMP_S (file->last_mtime));
+      time64_t file_date = (file->last_mtime == NONEXISTENT_MTIME
+                          ? (time64_t) -1
+                          : (time64_t) FILE_TIMESTAMP_S (file->last_mtime));
       if (ar_member_date (file->name) != file_date)
         {
           if (on_behalf_of)

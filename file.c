@@ -14,6 +14,7 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "time64.h"
 #include "makeint.h"
 
 #include <assert.h>
@@ -858,7 +859,7 @@ set_command_state (struct file *file, enum cmd_state state)
 /* Convert an external file timestamp to internal form.  */
 
 FILE_TIMESTAMP
-file_timestamp_cons (const char *fname, time_t stamp, long int ns)
+file_timestamp_cons (const char *fname, time64_t stamp, long int ns)
 {
   int offset = ORDINARY_MTIME_MIN + (FILE_TIMESTAMP_HI_RES ? ns : 0);
   FILE_TIMESTAMP s = stamp;
@@ -885,7 +886,7 @@ FILE_TIMESTAMP
 file_timestamp_now (int *resolution)
 {
   int r;
-  time_t s;
+  time64_t s;
   int ns;
 
   /* Don't bother with high-resolution clocks if file timestamps have
@@ -919,7 +920,11 @@ file_timestamp_now (int *resolution)
 #endif
 
   r = 1000000000;
+#ifdef __TANDEM
+  s = time64_ext ((time64_t *) 0);
+#else
   s = time ((time_t *) 0);
+#endif
   ns = 0;
 
 #if FILE_TIMESTAMP_HI_RES
@@ -934,8 +939,12 @@ file_timestamp_now (int *resolution)
 void
 file_timestamp_sprintf (char *p, FILE_TIMESTAMP ts)
 {
-  time_t t = (time_t) FILE_TIMESTAMP_S (ts);
+  time64_t t = (time64_t) FILE_TIMESTAMP_S (ts);
+#ifdef __TANDEM
+  struct tm *tm = localtime64_ext (&t);
+#else
   struct tm *tm = localtime (&t);
+#endif
 
   if (tm)
     sprintf (p, "%04d-%02d-%02d %02d:%02d:%02d",
