@@ -111,6 +111,10 @@ EOF
 '
 
 test_expect_success POBJDLL 'retest compile after touch - should not run' '
+<<<<<<< Updated upstream
+=======
+	sleep 2 &&
+>>>>>>> Stashed changes
 	launch_make > capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": Nothing to be done for ${QUOTE}all${QUOTE}." >expecting &&
