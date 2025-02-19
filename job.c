@@ -2049,7 +2049,7 @@ load_too_high (void)
   return 1;
 #else
   static double last_sec;
-  static time_t last_now;
+  static time64_t last_now;
 
   /* This is disabled by default for now, because it will behave badly if the
      user gives a value > the number of cores; in that situation the load will
@@ -2063,7 +2063,7 @@ load_too_high (void)
   static int proc_fd = PROC_FD_INIT;
 
   double load, guess;
-  time_t now;
+  time64_t now;
 
 #ifdef WINDOWS32
   /* sub_proc.c is limited in the number of objects it can wait for. */

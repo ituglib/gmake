@@ -252,8 +252,8 @@ struct directory_contents
      * qualified name of the directory. Beware though, this is also
      * unreliable. I'm open to suggestion on a better way to emulate inode.  */
     char *path_key;
-    time_t ctime;
-    time_t mtime;        /* controls check for stale directory cache */
+    time64_t ctime;
+    time64_t mtime;        /* controls check for stale directory cache */
     int fs_flags;     /* FS_FAT, FS_NTFS, ... */
 # define FS_FAT      0x1
 # define FS_NTFS     0x2
@@ -664,7 +664,7 @@ dir_contents_file_exists_p (struct directory_contents *dir,
         {
           if ((dir->fs_flags & FS_FAT) != 0)
             {
-              dir->mtime = time ((time_t *) 0);
+              dir->mtime = time ((time64_t *) 0);
               rehash = 1;
             }
           else if (stat (dir->path_key, &st) == 0 && st.st_mtime > dir->mtime)
@@ -790,7 +790,7 @@ file_exists_p (const char *name)
 
 #ifndef NO_ARCHIVES
   if (ar_name (name))
-    return ar_member_date (name) != (time_t) -1;
+    return ar_member_date (name) != (time64_t) -1;
 #endif
 
 #ifdef _GUARDIAN_TARGET

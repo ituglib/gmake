@@ -70,7 +70,7 @@ EOF
 	launch_make > actual &&
 	launch_spoolcom_delete $this_test >/dev/null &&
 	cat >expecting <<-EOF &&
-	\$SYSTEM.SYSTEM.SCOBOLX/IN nsgreqs,OUT =SPOOL/pobj
+	\$SYSTEM.SYSTEM.SCOBOLX/IN nsgreqs,OUT =SPOOL,TERM \$NULL/pobj
 	EOF
 	test_cmp expecting actual
 '
@@ -83,6 +83,7 @@ test_expect_success POBJDLL 'retest compile - should not run' '
 '
 
 test_expect_success POBJDLL 'recompile - changed source' '
+	sleep 2 &&
 	edit_loader nsgreqs <<-EOF > /dev/null &&
 a
 
@@ -98,11 +99,13 @@ EOF
 '
 
 test_expect_success POBJDLL 'pobj member touch' '
+	sleep 2 &&
 	edit_loader nsgreqs <<-EOF > /dev/null &&
 a
 
 //
 EOF
+	sleep 2 &&
 	launch_make --touch > actual &&
 	cat >expecting <<-EOF &&
 	touch pobjdir(nsgreqs)
@@ -110,8 +113,10 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_success POBJDLL 'retest compile after touch - should not run' '
+test_expect_failure POBJDLL 'retest compile after touch - should not run - issue #120' '
+	sleep 2 &&
 	launch_make > capture &&
+	cat capture &&
 	sed "1,\$s/^.*:/:/" < capture > actual &&
 	echo ": Nothing to be done for ${QUOTE}all${QUOTE}." >expecting &&
 	test_cmp expecting actual

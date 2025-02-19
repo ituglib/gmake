@@ -1272,7 +1272,7 @@ f_mtime (struct file *file, int search)
 
       char *arname, *memname;
       struct file *arfile;
-      time_t member_date;
+      time64_t member_date;
 
       /* Find the archive's name.  */
       ar_parse_name (file->name, &arname, &memname);
@@ -1320,7 +1320,7 @@ f_mtime (struct file *file, int search)
         return NONEXISTENT_MTIME;
 
       member_date = ar_member_date (file->hname);
-      mtime = (member_date == (time_t) -1
+      mtime = (member_date == (time64_t) -1
                ? NONEXISTENT_MTIME
                : file_timestamp_cons (file->hname, member_date, 0));
     }
