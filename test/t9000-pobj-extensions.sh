@@ -113,7 +113,7 @@ EOF
 	test_cmp expecting actual
 '
 
-test_expect_failure POBJDLL 'retest compile after touch - should not run - issue #120' '
+test_expect_success POBJDLL 'retest compile after touch - should not run' '
 	sleep 2 &&
 	launch_make > capture &&
 	cat capture &&
