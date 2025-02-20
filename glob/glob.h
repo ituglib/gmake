@@ -23,6 +23,10 @@ USA.  */
 extern "C" {
 #endif
 
+#ifdef _GUARDIAN_TARGET
+#include "time64.h"
+#endif
+
 #undef	__ptr_t
 #if defined __cplusplus || (defined __STDC__ && __STDC__) || defined WINDOWS32
 # if !defined __GLIBC__
