@@ -25,6 +25,9 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "commands.h"
 #include "variable.h"
 #include "os.h"
+#if defined _GUARDIAN_TARGET
+# include "time64.h"
+#endif
 
 /* Default shell to use.  */
 #ifdef WINDOWS32
@@ -939,7 +942,11 @@ reap_children (int block, int err)
       if (exit_sig == 0 && exit_code == 127 && c->cmd_name)
         {
           const char *e = NULL;
-          struct stat st;
+#if ! defined _GUARDIAN_TARGET
+	      struct stat st;
+#else
+	      struct stat64_post2038 st;
+#endif
           int r;
 
           /* There are various ways that this will show a different error than
@@ -947,7 +954,7 @@ reap_children (int block, int err)
              to fork/exec but I don't want to bother with that.  Just do the
              best we can.  */
 
-          EINTRLOOP(r, stat(c->cmd_name, &st));
+          EINTRLOOP(r, stat(c->cmd_name, (struct stat *)&st));
           if (r < 0)
             e = strerror (errno);
           else if (S_ISDIR(st.st_mode) || !(st.st_mode & S_IXUSR))

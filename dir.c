@@ -45,6 +45,7 @@ const char *vmsify (const char *name, int type);
 
 #ifdef _GUARDIAN_TARGET
 # include <cextdecs.h>
+# include "time64.h"
 #endif
 
 /* In GNU systems, <dirent.h> defines this macro for us.  */
@@ -462,7 +463,11 @@ find_directory (const char *name)
     {
       /* The directory was not found.  Create a new entry for it.  */
       const char *p = name + strlen (name);
+#if !defined _GUARDIAN_TARGET
       struct stat st;
+#else
+      struct stat64_post2038 st;
+#endif
       int r;
 
       dir = xmalloc (sizeof (struct directory));
@@ -498,7 +503,7 @@ find_directory (const char *name)
         r = stat (tem, &st);
       }
 #else
-      EINTRLOOP (r, stat (name, &st));
+      EINTRLOOP (r, stat (name, (struct stat *)&st));
 #endif
 
       if (r < 0)

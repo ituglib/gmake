@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef _GUARDIAN_TARGET
 #define _XOPEN_SOURCE_EXTENDED 1
+#include "time64.h"
 #endif
 
 #include "makeint.h"
@@ -1170,7 +1171,7 @@ touch_file (struct file *file)
         TOUCH_ERROR ("touch: open: ");
       else
         {
-          struct stat statbuf;
+          struct stat statbuf; // acceptable non-y2038 use
           char buf = 'x';
           int e;
 
@@ -1472,7 +1473,11 @@ static FILE_TIMESTAMP
 name_mtime (const char *name)
 {
   FILE_TIMESTAMP mtime;
+#if !defined _GUARDIAN_TARGET
   struct stat st;
+#else
+  struct stat64_post2038 st;
+#endif
   int e;
 
 #if defined(WINDOWS32)
@@ -1512,7 +1517,7 @@ name_mtime (const char *name)
       }
   }
 #else
-  EINTRLOOP (e, stat (name, &st));
+  EINTRLOOP (e, stat (name, (struct stat *)&st));
 #endif
   if (e == 0)
     mtime = FILE_TIMESTAMP_STAT_MODTIME (name, st);
@@ -1549,7 +1554,7 @@ name_mtime (const char *name)
           long llen;
           char *p;
 
-          EINTRLOOP (e, lstat (lpath, &st));
+          EINTRLOOP (e, stat (lpath, (struct stat *) &st));
           if (e)
             {
               /* Just take what we have so far.  */

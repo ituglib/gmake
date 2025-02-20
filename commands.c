@@ -27,6 +27,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef _GUARDIAN_TARGET
 #include <cextdecs.h>
+#include "time64.h"
 #endif
 
 #if VMS
@@ -623,7 +624,11 @@ fatal_error_signal (int sig)
 static void
 delete_target (struct file *file, const char *on_behalf_of)
 {
+#if !defined _GUARDIAN_TARGET
   struct stat st;
+#else
+  struct stat64_post2038 st;
+#endif
   int e;
 
   if (file->precious || file->phony)
@@ -650,7 +655,7 @@ delete_target (struct file *file, const char *on_behalf_of)
     }
 #endif
 
-  EINTRLOOP (e, stat (file->name, &st));
+  EINTRLOOP (e, stat (file->name, (struct stat *)&st));
   if (e == 0
       && S_ISREG (st.st_mode)
       && FILE_TIMESTAMP_STAT_MODTIME (file->name, st) != file->last_mtime)

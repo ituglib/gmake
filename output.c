@@ -158,7 +158,7 @@ static void
 set_append_mode (int fd)
 {
 #if defined(F_GETFL) && defined(F_SETFL) && defined(O_APPEND)
-  struct stat stbuf;
+  struct stat stbuf; // Acceptable non-y2038 usage
   int flags;
   if (fstat (fd, &stbuf) != 0 || !S_ISREG (stbuf.st_mode))
     return;
@@ -201,7 +201,7 @@ sync_init (void)
 #else
   if (STREAM_OK (stdout))
     {
-      struct stat stbuf_o, stbuf_e;
+      struct stat stbuf_o, stbuf_e; // acceptable non-y2038 usage
 
       sync_handle = fileno (stdout);
       combined_output = (fstat (fileno (stdout), &stbuf_o) == 0

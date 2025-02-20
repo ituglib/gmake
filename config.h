@@ -352,18 +352,18 @@
 #define PACKAGE "make"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "support@nexbridge.com"
+#define PACKAGE_BUGREPORT "nonstopsupport@hpe.com"
 
 #if defined (_TNS_E_TARGET)
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "GNU make TNS/E"
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU make 4.3g9 TNS/E"
+#define PACKAGE_STRING "GNU make 4.3g10 TNS/E"
 #elif defined (_TNS_X_TARGET)
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "GNU make TNS/X"
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU make 4.3g9 TNS/X"
+#define PACKAGE_STRING "GNU make 4.3g10 TNS/X"
 #endif
 
 /* Define to the one symbol short name of this package. */
@@ -373,7 +373,7 @@
 #define PACKAGE_URL "http://www.gnu.org/software/make/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3g9"
+#define PACKAGE_VERSION "4.3g10"
 
 /* Define to the character that separates directories in PATH. */
 #define PATH_SEPARATOR_CHAR ':'
@@ -440,7 +440,7 @@
 
 
 /* Version number of package */
-#define VERSION "4.3g9"
+#define VERSION "4.3g10"
 
 /* Use platform specific coding */
 /* #undef WINDOWS32 */
