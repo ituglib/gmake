@@ -130,10 +130,14 @@ typedef struct
     void (*gl_closedir) __PMT ((void *));
     struct dirent *(*gl_readdir) __PMT ((void *));
     __ptr_t (*gl_opendir) __PMT ((__const char *));
-    int (*gl_lstat) __PMT ((__const char *, struct stat *));
 #if defined(VMS) && defined(__DECC) && !defined(_POSIX_C_SOURCE)
+    int (*gl_lstat) __PMT ((__const char *, struct stat *));
     int (*gl_stat) __PMT ((__const char *, struct stat *, ...));
+#elif defined _GUARDIAN_TARGET
+    int (*gl_lstat) __PMT ((__const char *, struct stat64_post2038 *));
+    int (*gl_stat) __PMT ((__const char *, struct stat64_post2038 *));
 #else
+    int (*gl_lstat) __PMT ((__const char *, struct stat *));
     int (*gl_stat) __PMT ((__const char *, struct stat *));
 #endif
   } glob_t;

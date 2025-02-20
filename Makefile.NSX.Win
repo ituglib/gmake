@@ -3,7 +3,7 @@
 VPROC_GMAKE=$(shell sh ./version.sh MAIN L01)
 
 # Set up environment to use product compiler.
-NONSTOPOSVERSION?=L16.05
+NONSTOPOSVERSION?=L20.10
 export COMP_ROOT=C:\Program Files (x86)\HPE NonStop\$(NONSTOPOSVERSION)
 
 # Set the systype flag.
@@ -19,7 +19,7 @@ CFLAGS=$(SYSTYPE_FLAG) -D INCLUDEDIR=0 -D LIBDIR=0 -D _POSIX_SOURCE \
 	-D OMIT_PSVGTH \
 	-O2 $(INCLUDES) $(CFLAGS_DBG) 
 GMAKE_EXE=gmake
-LDFLAGS=$(SYSTYPE_FLAG) -lrld
+LDFLAGS=$(SYSTYPE_FLAG) -lrld -Wxld="-unres_symbols ignore"
 
 all: $(GMAKE_EXE)
 

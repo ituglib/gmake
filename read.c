@@ -14,6 +14,9 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifdef _GUARDIAN_TARGET
+#include "time64.h"
+#endif
 #include "makeint.h"
 
 #include <assert.h>
@@ -2930,7 +2933,11 @@ construct_include_path (const char **arg_dirs)
 #ifdef VAXC             /* just don't ask ... */
   stat_t stbuf;
 #else
+# ifdef _GUARDIAN_TARGET
+  struct stat64_post2038 stbuf;
+# else
   struct stat stbuf;
+# endif
 #endif
   const char **dirs;
   const char **cpp;
@@ -2969,7 +2976,11 @@ construct_include_path (const char **arg_dirs)
               dir = expanded;
           }
 
+#ifdef _GUARDIAN_TARGET
+        EINTRLOOP (e, stat64_post2038_fcn (dir, &stbuf));
+#else
         EINTRLOOP (e, stat (dir, &stbuf));
+#endif
         if (e == 0 && S_ISDIR (stbuf.st_mode))
           {
             size_t len = strlen (dir);
@@ -3010,7 +3021,11 @@ construct_include_path (const char **arg_dirs)
     {
       int e;
 
+#ifdef _GUARDIAN_TARGET
+      EINTRLOOP (e, stat64_post2038_fcn (*cpp, &stbuf));
+#else
       EINTRLOOP (e, stat (*cpp, &stbuf));
+#endif
       if (e == 0 && S_ISDIR (stbuf.st_mode))
         {
           size_t len = strlen (*cpp);

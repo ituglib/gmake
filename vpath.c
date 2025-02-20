@@ -14,6 +14,9 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifdef _GUARDIAN_TARGET
+#include "time64.h"
+#endif
 #include "makeint.h"
 #include "filedef.h"
 #include "variable.h"
@@ -494,7 +497,7 @@ selective_vpath_search (struct vpath *path, const char *file,
 #ifdef _GUARDIAN_TARGET
       if ( 1 ) /* stat below will check this */
         {
-          struct stat st;
+          struct stat64_post2038 st;
 
           exists_in_cache = 1; /* force stat */
 #else
@@ -524,7 +527,11 @@ selective_vpath_search (struct vpath *path, const char *file,
             {
               int e;
 
+#ifdef _GUARDIAN_TARGET
+              EINTRLOOP (e, stat64_post2038_fcn (name, &st)); /* Does it really exist?  */
+#else
               EINTRLOOP (e, stat (name, &st)); /* Does it really exist?  */
+#endif
               if (e != 0)
                 {
                   exists = 0;
