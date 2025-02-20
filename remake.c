@@ -14,6 +14,7 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef _GUARDIAN_TARGET
+#include "time64.h"
 #define _XOPEN_SOURCE_EXTENDED 1
 #endif
 
@@ -1472,7 +1473,11 @@ static FILE_TIMESTAMP
 name_mtime (const char *name)
 {
   FILE_TIMESTAMP mtime;
+#if defined(_GUARDIAN_TARGET)
+  struct stat64_post2038 st;
+#else
   struct stat st;
+#endif
   int e;
 
 #if defined(WINDOWS32)
@@ -1511,6 +1516,8 @@ name_mtime (const char *name)
         e = -1;
       }
   }
+#elif defined(_GUARDIAN_TARGET)
+  EINTRLOOP (e, stat64_post2038_fcn (name, &st));
 #else
   EINTRLOOP (e, stat (name, &st));
 #endif
@@ -1549,7 +1556,11 @@ name_mtime (const char *name)
           long llen;
           char *p;
 
+#ifdef _GUARDIAN_TARGET
+          EINTRLOOP (e, lstat64_post2038_fcn (lpath, &st));
+#else
           EINTRLOOP (e, lstat (lpath, &st));
+#endif
           if (e)
             {
               /* Just take what we have so far.  */

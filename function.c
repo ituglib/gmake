@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef __TANDEM
+#include "time64.h"
 #include <cextdecs.h>
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <string.h>
@@ -2109,7 +2110,11 @@ func_realpath (char *o, char **argv, const char *funcname UNUSED)
       if (len < GET_PATH_MAX)
         {
           char *rp;
+#if defined _GUARDIAN_TARGET
+          struct stat64_post2038 st;
+#else
           struct stat st;
+#endif
           PATH_VAR (in);
           PATH_VAR (out);
 
@@ -2134,7 +2139,11 @@ func_realpath (char *o, char **argv, const char *funcname UNUSED)
           if (rp)
             {
               int r;
+#if defined _GUARDIAN_TARGET
+              EINTRLOOP (r, stat64_post2038_fcn (out, &st));
+#else
               EINTRLOOP (r, stat (out, &st));
+#endif
               if (r == 0)
                 {
                   o = variable_buffer_output (o, out, strlen (out));

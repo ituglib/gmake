@@ -14,6 +14,9 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifdef _GUARDIAN_TARGET
+#include "time64.h"
+#endif
 #include "makeint.h"
 #include "filedef.h"
 #include "dep.h"
@@ -623,7 +626,11 @@ fatal_error_signal (int sig)
 static void
 delete_target (struct file *file, const char *on_behalf_of)
 {
+#ifdef _GUARDIAN_TARGET
+  struct stat64_post2038 st;
+#else
   struct stat st;
+#endif
   int e;
 
   if (file->precious || file->phony)
@@ -650,7 +657,11 @@ delete_target (struct file *file, const char *on_behalf_of)
     }
 #endif
 
+#ifdef _GUARDIAN_TARGET
+  EINTRLOOP (e, stat64_post2038_fcn (file->name, &st));
+#else
   EINTRLOOP (e, stat (file->name, &st));
+#endif
   if (e == 0
       && S_ISREG (st.st_mode)
       && FILE_TIMESTAMP_STAT_MODTIME (file->name, st) != file->last_mtime)

@@ -14,6 +14,9 @@ A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#ifdef _GUARDIAN_TARGET
+#include "time64.h"
+#endif
 #include "makeint.h"
 #include "hash.h"
 #include "filedef.h"
@@ -462,7 +465,11 @@ find_directory (const char *name)
     {
       /* The directory was not found.  Create a new entry for it.  */
       const char *p = name + strlen (name);
+#ifdef _GUARDIAN_TARGET
+      struct stat64_post2038 st;
+#else
       struct stat st;
+#endif
       int r;
 
       dir = xmalloc (sizeof (struct directory));
@@ -497,6 +504,8 @@ find_directory (const char *name)
 
         r = stat (tem, &st);
       }
+#elif defined(_GUARDIAN_TARGET)
+      EINTRLOOP (r, stat64_post2038_fcn (name, &st));
 #else
       EINTRLOOP (r, stat (name, &st));
 #endif

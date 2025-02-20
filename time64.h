@@ -59,6 +59,10 @@ int    stat64_post2038_fcn(const char *, struct stat64_post2038 *);
 
 #pragma function stat64_post2038_fcn     (alias("statLP64_"), unspecified)
 
+int       lstat64_post2038_fcn(const char *, struct stat64_post2038 *);
+
+#pragma function lstat64_post2038_fcn  (alias("lstatLP64_"), unspecified)
+
 /**
  * Get a 64-bit time from a 32-bit application.
  *
