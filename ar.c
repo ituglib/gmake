@@ -33,6 +33,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 # include "copylib.h"
 # define DDLDICT_SUPPRESS_EXTERNALIZATION_VERSION
 # include "ddldict.h"
+# include "time64.h"
 #endif
 
 /* Return nonzero if NAME is an archive-member reference, zero if not.  An
@@ -197,7 +198,7 @@ ar_touch (const char *name)
         TOUCH_ERROR ("touch: open: ");
       else
         {
-          struct stat statbuf;
+          struct stat statbuf; // acceptable non-y2038 use
           char buf = 'x';
           int e;
 

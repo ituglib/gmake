@@ -47,7 +47,7 @@ struct  stat64_post2038 {
         uid_t   st_uid;
         gid_t   st_gid;
         dev_t   st_rdev;
-        off64_t   st_size;
+        int64_t   st_size;
         int64_t st_atime;
         int64_t st_mtime;
         int64_t st_ctime;

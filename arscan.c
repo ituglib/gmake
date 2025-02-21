@@ -29,6 +29,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef __TANDEM
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <strings.h>
+#include "time64.h"
 #endif
 
 #ifndef NO_ARCHIVES
@@ -904,7 +905,11 @@ ar_member_touch (const char *arname, const char *memname)
   off_t o;
   int r;
   unsigned int ui;
+#if !defined _GUARDIAN_TARGET
   struct stat statbuf;
+#else
+  struct stat64_post2038 statbuf;
+#endif
 
   if (pos < 0)
     return (int) pos;
@@ -922,14 +927,22 @@ ar_member_touch (const char *arname, const char *memname)
   if (r != AR_HDR_SIZE)
     goto lose;
   /* The file's mtime is the time we we want.  */
+#if ! defined _GUARDIAN_TARGET
   EINTRLOOP (r, fstat (fd, &statbuf));
+#else
+  EINTRLOOP (r, stat (arname, (struct stat *)&statbuf));
+#endif
   if (r < 0)
     goto lose;
   /* Advance member's time to that time */
 #if defined(ARFMAG) || defined(ARFZMAG) || defined(AIAMAG) || defined(WINDOWS32)
   for (ui = 0; ui < sizeof ar_hdr.ar_date; ui++)
     ar_hdr.ar_date[ui] = ' ';
+# if ! defined _GUARDIAN_TARGET
   sprintf (TOCHAR (ar_hdr.ar_date), "%lu", (long unsigned) statbuf.st_mtime);
+# else
+  sprintf (TOCHAR (ar_hdr.ar_date), "%lld", (long long) statbuf.st_mtime);
+# endif
   ar_hdr.ar_date[strlen ((char *) ar_hdr.ar_date)] = ' ';
 #else
   ar_hdr.ar_date = statbuf.st_mtime;

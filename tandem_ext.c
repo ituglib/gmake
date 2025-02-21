@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/stat.h>
+//#include <sys/stat.h>
 #include <cextdecs.h>
 #ifdef _OSS_HOST
 #include <zsysc>
@@ -17,6 +17,7 @@
 # define DDLDICT_SUPPRESS_EXTERNALIZATION_VERSION
 # define DDLDICT_EXTERN extern
 #include "ddldict.h"
+#include "time64.h"
 
 /**
  * Copy into a buffer, taking account a terminator, like ., and the maximum size
@@ -366,13 +367,14 @@ char *toGuardian(char *guardianName, const char *ossName) {
 
 /* NSK version of UNIX stat */
 
-int stat(const char *pathname, struct stat *st)
+int stat(const char *pathname, struct stat *st_old)
 {
   short rc, datetime[8], infolist = ZSYS_VAL_FINF_AGGRMODIFY_LCT; /* 145 */
   int julday;
   long long i64;
   struct tm caltime;
   char oss_pathname[PATH_MAX+1];
+  struct stat64_post2038 *st = (struct stat64_post2038 *) st_old;
 
   if (pathname && pathname[0] == '.' && pathname[1] == '/') {
     pathname += 2;
@@ -381,7 +383,7 @@ int stat(const char *pathname, struct stat *st)
 	    pathname = toGuardian(oss_pathname, pathname);
   }
 
-  memset(st, 0, sizeof(struct stat));
+  memset(st, 0, sizeof(struct stat64_post2038));
 
   switch (path_type(pathname)) {
   case NSKPATHTYPE_EXPAND_FILE:
@@ -426,34 +428,21 @@ int stat(const char *pathname, struct stat *st)
              datetime[3], datetime[4], datetime[5]);
     }
     tzset(); /* set daylight if needed */
-    memset(&caltime, 0, sizeof(caltime));
-    caltime.tm_year = datetime[0] - 1900;
-    caltime.tm_mon  = datetime[1] - 1;
-    caltime.tm_mday = datetime[2];
-    caltime.tm_hour = datetime[3];
-    caltime.tm_min  = datetime[4];
-    caltime.tm_sec  = datetime[5];
-    caltime.tm_isdst = daylight;
 
-    st->st_mtime = mktime(&caltime);
-    /* If mktime returns an error, something is very wrong... probably the DST */
-    /* errno is usually 0 in this case so printing it would just be confusing */
+    st->st_mtime = time64_from_julian(i64);
+
     if (st->st_mtime == -1) {
       printf("mktime returned -1 for the timestamp from %s.\n"
              "The DST table may need to be rebuilt.\n", pathname);
       if (ISDB(DB_BASIC)) {
-        printf("mktime updated the tm struct to %04d/%02d/%02d %02d:%02d:%02d\n"
-               "and set wday to %d, yday to %d and isdst to %d: see time.h\n",
-               caltime.tm_year, caltime.tm_mon, caltime.tm_mday, caltime.tm_hour,
-               caltime.tm_min, caltime.tm_sec, caltime.tm_wday, caltime.tm_yday,
-               caltime.tm_isdst);
+        printf("convert to mtime failed on %lld\n", i64);
       }
       /* Returning will just result in showing the file timestamp in the debug */
       /* info and then having gmake say the file does not exist. */
       abort();
     } else {
 	      if (ISDB(DB_BASIC)) {
-	        printf("mktime AGGRMODIFY_LCT is %d\n", st->st_mtime);
+	        printf("mtime AGGRMODIFY_LCT is %d\n", st->st_mtime);
 	      }
     }
     st->st_dev   = 0;

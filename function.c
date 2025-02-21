@@ -18,6 +18,7 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <cextdecs.h>
 #define _XOPEN_SOURCE_EXTENDED 1
 #include <string.h>
+#include "time64.h"
 #endif
 
 #include "makeint.h"
@@ -2109,7 +2110,11 @@ func_realpath (char *o, char **argv, const char *funcname UNUSED)
       if (len < GET_PATH_MAX)
         {
           char *rp;
-          struct stat st;
+#if ! defined _GUARDIAN_TARGET
+	      struct stat st;
+#else
+	      struct stat64_post2038 st;
+#endif
           PATH_VAR (in);
           PATH_VAR (out);
 
@@ -2134,7 +2139,7 @@ func_realpath (char *o, char **argv, const char *funcname UNUSED)
           if (rp)
             {
               int r;
-              EINTRLOOP (r, stat (out, &st));
+              EINTRLOOP (r, stat (out, (struct stat *)&st));
               if (r == 0)
                 {
                   o = variable_buffer_output (o, out, strlen (out));

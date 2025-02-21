@@ -20,6 +20,9 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef WINDOWS32
 #include "pathstuff.h"
 #endif
+#ifdef _GUARDIAN_TARGET
+# include "time64.h"
+#endif
 #include "debug.h"
 
 
@@ -494,7 +497,7 @@ selective_vpath_search (struct vpath *path, const char *file,
 #ifdef _GUARDIAN_TARGET
       if ( 1 ) /* stat below will check this */
         {
-          struct stat st;
+          struct stat64_post2038 st;
 
           exists_in_cache = 1; /* force stat */
 #else
@@ -524,7 +527,7 @@ selective_vpath_search (struct vpath *path, const char *file,
             {
               int e;
 
-              EINTRLOOP (e, stat (name, &st)); /* Does it really exist?  */
+              EINTRLOOP (e, stat (name, (struct stat *)&st)); /* Does it really exist?  */
               if (e != 0)
                 {
                   exists = 0;
