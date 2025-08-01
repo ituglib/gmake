@@ -31,7 +31,7 @@ pipeline {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib']) {
                     sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS"
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=/G/sas22/jenkmake/gmake"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=/G/data05/jenkmake/gmake"
                 }
             }
         }
@@ -56,7 +56,7 @@ pipeline {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
-                        'DEST=/G/sas22/jenkins']) {
+                        'DEST=/G/data05/jenkins']) {
                     sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=${DEST}/gmake"
                 }
             }
@@ -67,7 +67,7 @@ pipeline {
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
                         'MANIFEST_FILE=gmake.bin.list',
-                        'GHOME=/G/sas22/jenkins',
+                        'GHOME=/G/data05/jenkins',
                         'PAK_FILE=gmakepak',
                         'PAK_LIST=gmakelst',
                         'DEST=/home/ituglib/randall/stage']) {
