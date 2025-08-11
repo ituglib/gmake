@@ -1,6 +1,6 @@
 # DO NOT DELETE THIS LINE -- make depend uses it
 
-VPROC_GMAKE=$(shell sh ./version.sh MAIN J01)
+VPROC_GMAKE=$(shell sh ./version.sh MAIN H01)
 
 # Set the systype flag.
 SYSTYPE_FLAG = -Wsystype=guardian -Wtarget=tns/e
