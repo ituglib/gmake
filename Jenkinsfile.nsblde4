@@ -58,7 +58,7 @@ pipeline {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
-                        'DEST=/G/data05/jenkins']) {
+                        'DEST=/G/sas22/jenkins']) {
                     sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=${DEST}/gmake"
                 }
             }
@@ -69,7 +69,7 @@ pipeline {
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
                         'MANIFEST_FILE=gmake.bin.list',
-                        'GHOME=/G/data05/jenkins',
+                        'GHOME=/G/sas22/jenkins',
                         'PAK_FILE=gmakepak',
                         'PAK_LIST=gmakelst',
                         'DEST=/home/ituglib/randall/stage']) {
@@ -82,7 +82,7 @@ pipeline {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
                         '_RLD_LIB_PATH=:/usr/local/lib',
                         'BASENAME=gmake',
-                        'GHOME=/G/data05/randall',
+                        'GHOME=/G/sas22/randall',
                         'DEST=/home/ituglib/randall/stage',
                         'REMOTE=-oPort=28222 ituglib.randall@10.0.0.190',
                         'REMOTE_DEST=/web/stage']) {
