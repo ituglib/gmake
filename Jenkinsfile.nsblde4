@@ -1,8 +1,8 @@
-/* Jenkinsfile pipeline for GMake on TCMVNS (TNS/V) */
+/* Jenkinsfile pipeline for GMake on NSBLDE4 (TNS/E) */
 pipeline {
     agent any
     options {
-        buildDiscarder(logRotator(numToKeepStr: '2'))
+        buildDiscarder(logRotator(numToKeepStr: '5'))
     }
     triggers {
         pollSCM('H H * * *')
@@ -23,15 +23,17 @@ pipeline {
                     [$class: 'CloneOption', timeout: 120, shallow: false, noTags: false],
                     [$class: 'CheckoutOption', timeout: 120],
                     ],
-                userRemoteConfigs: [[url: 'https://github.com/ituglib/gmake']]])
+                userRemoteConfigs: [[url: 'https://github.com/ituglib/gmake.git']]])
             }
         }
         stage('build') {
             steps {
                 withEnv(['PATH=/usr/coreutils/bin:/usr/local/bin:/usr/bin:/bin:/usr/ucb',
-                        '_RLD_LIB_PATH=:/usr/local/lib']) {
+                        '_RLD_LIB_PATH=:/usr/local/lib',
+                        'BUILD_SV=/G/sas22/jenkmake']) {
+                    sh "echo Building to ${BUILD_SV}/gmake"
                     sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS"
-                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=/G/data05/jenkmake/gmake"
+                    sh "/usr/coreutils/bin/make -f Makefile.NSE.OSS GMAKE_EXE=${BUILD_SV}/gmake"
                 }
             }
         }
