@@ -736,7 +736,11 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			strcat(cbuf, "/");
 		}
 	} else {
-		strcat(cbuf, argv[0]);
+		if (*(argv[0]) == '_') {
+			strcat(cbuf, argv[0]+1);
+		} else {
+			strcat(cbuf, argv[0]);
+		}
 		for (index = 1; argv[index]; index++) {
 			strcat(cbuf, " ");
 			strcat(cbuf, argv[index]);
