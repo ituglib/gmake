@@ -1222,6 +1222,9 @@ start_job_command (struct child *child)
 
   p = child->command_ptr;
   child->noerror = ((flags & COMMANDS_NOERROR) != 0);
+#if defined _GUARDIAN_TARGET
+  child->nowarning = ((flags & COMMANDS_NOWARNING) != 0);
+#endif
 
   while (*p != '\0')
     {

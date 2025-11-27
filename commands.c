@@ -418,7 +418,11 @@ chop_commands (struct commands *cmds)
       unsigned char flags = 0;
       const char *p = lines[idx];
 
-      while (ISBLANK (*p) || *p == '-' || *p == '@' || *p == '+')
+      while (ISBLANK (*p) || *p == '-' || *p == '@' || *p == '+'
+#if defined (_GUARDIAN_TARGET)
+    		  || *p == '_'
+#endif
+    				  )
         switch (*(p++))
           {
           case '+':
@@ -430,6 +434,11 @@ chop_commands (struct commands *cmds)
           case '-':
             flags |= COMMANDS_NOERROR;
             break;
+#if defined (_GUARDIAN_TARGET)
+          case '_':
+            flags |= COMMANDS_NOWARNING;
+            break;
+#endif
           }
 
       /* If no explicit '+' was given, look for MAKE variable references.  */

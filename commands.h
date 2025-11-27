@@ -33,6 +33,7 @@ struct commands
 #define COMMANDS_RECURSE        1 /* Recurses: + or $(MAKE).  */
 #define COMMANDS_SILENT         2 /* Silent: @.  */
 #define COMMANDS_NOERROR        4 /* No errors: -.  */
+#define COMMANDS_NOWARNING        8 /* No warnings: -.  */
 
 RETSIGTYPE fatal_error_signal (int sig);
 void execute_file_commands (struct file *file);

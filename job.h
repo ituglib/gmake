@@ -58,6 +58,9 @@ struct child
 
     unsigned int  remote:1;     /* Nonzero if executing remotely.  */
     unsigned int  noerror:1;    /* Nonzero if commands contained a '-'.  */
+#if defined _GUARDIAN_TARGET
+    unsigned int  nowarning:1;    /* Nonzero if commands contained a '_'.  */
+#endif
     unsigned int  good_stdin:1; /* Nonzero if this child has a good stdin.  */
     unsigned int  deleted:1;    /* Nonzero if targets have been deleted.  */
     unsigned int  recursive:1;  /* Nonzero for recursive command ('+' etc.)  */
