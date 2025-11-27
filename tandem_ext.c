@@ -102,7 +102,7 @@ static NskPathType path_type(const char *pathname) {
     /* dot should point to the $volume. check the node name length. */
     if (!*dot)
       return NSKPATHTYPE_NODE;
-    if (*dot != '$' || dot - pathname > 8)
+    if (*dot != '$' || (dot - pathname) > 9)
       return NSKPATHTYPE_UNKNOWN;
     dot2 = strchr(dot, '.');
     if (!dot2) {
@@ -111,7 +111,7 @@ static NskPathType path_type(const char *pathname) {
       return NSKPATHTYPE_EXPAND_VOLUME;
     }
     dot2++;
-    if (dot2 - dot > 9)
+    if ((dot2 - dot) > 9)
       return NSKPATHTYPE_UNKNOWN;
     dot = dot2;
     /* dot should point to the subvolume */
@@ -172,7 +172,7 @@ static NskPathType path_type(const char *pathname) {
         return NSKPATHTYPE_UNKNOWN;
       return NSKPATHTYPE_SIMPLE_FILE;
     }
-    if (dot - pathname > 8)
+    if ((dot - pathname) > 9)
       return NSKPATHTYPE_UNKNOWN;
     dot2 = strchr(dot, '.');
     if (dot2)
