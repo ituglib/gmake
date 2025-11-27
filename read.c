@@ -27,6 +27,9 @@ this program.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "rule.h"
 #include "debug.h"
 #include "hash.h"
+#ifdef _GUARDIAN_TARGET
+# include "time64.h"
+#endif
 
 
 #ifdef WINDOWS32
@@ -2929,6 +2932,8 @@ construct_include_path (const char **arg_dirs)
 {
 #ifdef VAXC             /* just don't ask ... */
   stat_t stbuf;
+#elif defined _GUARDIAN_TARGET
+  struct stat64_post2038 stbuf;
 #else
   struct stat stbuf;
 #endif
@@ -2969,7 +2974,7 @@ construct_include_path (const char **arg_dirs)
               dir = expanded;
           }
 
-        EINTRLOOP (e, stat (dir, &stbuf));
+        EINTRLOOP (e, stat (dir, (struct stat *)&stbuf));
         if (e == 0 && S_ISDIR (stbuf.st_mode))
           {
             size_t len = strlen (dir);
@@ -3010,7 +3015,7 @@ construct_include_path (const char **arg_dirs)
     {
       int e;
 
-      EINTRLOOP (e, stat (*cpp, &stbuf));
+      EINTRLOOP (e, stat (*cpp, (struct stat *)&stbuf));
       if (e == 0 && S_ISDIR (stbuf.st_mode))
         {
           size_t len = strlen (*cpp);

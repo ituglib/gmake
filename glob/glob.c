@@ -17,6 +17,7 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA.  */
 #ifdef __TANDEM
 #define _XOPEN_SOURCE_EXTENDED 1
+#include "time64.h"
 #endif
 
 /* AIX requires this to be the first thing in the file.  */
@@ -830,13 +831,17 @@ glob (pattern, flags, errfunc, pglob)
      can give the answer now.  */
   if (filename == NULL)
     {
+#if !defined _GUARDIAN_TARGET
       struct stat st;
+#else
+      struct stat64_post2038 st;
+#endif
 
       /* Return the directory if we don't check for error or if it exists.  */
       if ((flags & GLOB_NOCHECK)
 	  || (((flags & GLOB_ALTDIRFUNC)
-	       ? (*pglob->gl_stat) (dirname, &st)
-	       : __stat (dirname, &st)) == 0
+	       ? (*pglob->gl_stat) (dirname, (struct stat *)&st)
+	       : __stat (dirname, (struct stat *)&st)) == 0
 	      && S_ISDIR (st.st_mode)))
 	{
 	  pglob->gl_pathv
@@ -955,7 +960,11 @@ glob (pattern, flags, errfunc, pglob)
 	    {
 	      size_t filename_len = strlen (filename) + 1;
 	      char **new_pathv;
+#if ! defined _GUARDIAN_TARGET
 	      struct stat st;
+#else
+	      struct stat64_post2038 st;
+#endif
 
 	      /* This is an pessimistic guess about the size.  */
 	      pglob->gl_pathv
@@ -982,7 +991,7 @@ glob (pattern, flags, errfunc, pglob)
 
 		  /* First check whether this really is a directory.  */
 		  if (((flags & GLOB_ALTDIRFUNC)
-		       ? (*pglob->gl_stat) (dir, &st) : __stat (dir, &st)) != 0
+		       ? (*pglob->gl_stat) (dir, (struct stat *)&st) : __stat (dir, (struct stat *)&st)) != 0
 		      || !S_ISDIR (st.st_mode))
 		    /* No directory, ignore this entry.  */
 		    continue;
@@ -1058,11 +1067,15 @@ glob (pattern, flags, errfunc, pglob)
     {
       /* Append slashes to directory names.  */
       int i;
+#if ! defined _GUARDIAN_TARGET
       struct stat st;
+#else
+      struct stat64_post2038 st;
+#endif
       for (i = oldcount; i < pglob->gl_pathc; ++i)
 	if (((flags & GLOB_ALTDIRFUNC)
-	     ? (*pglob->gl_stat) (pglob->gl_pathv[i], &st)
-	     : __stat (pglob->gl_pathv[i], &st)) == 0
+	     ? (*pglob->gl_stat) (pglob->gl_pathv[i], (struct stat *)&st)
+	     : __stat (pglob->gl_pathv[i], (struct stat *)&st)) == 0
 	    && S_ISDIR (st.st_mode))
 	  {
  	    size_t len = strlen (pglob->gl_pathv[i]) + 2;
@@ -1291,7 +1304,11 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
 	{
 	  /* Since we use the normal file functions we can also use stat()
 	     to verify the file is there.  */
-	  struct stat st;
+#if ! defined _GUARDIAN_TARGET
+      struct stat st;
+#else
+      struct stat64_post2038 st;
+#endif
 	  size_t patlen = strlen (pattern);
 	  size_t dirlen = strlen (directory);
 	  char *fullname = (char *) __alloca (dirlen + 1 + patlen + 1);
@@ -1310,8 +1327,8 @@ glob_in_dir (pattern, directory, flags, errfunc, pglob)
 	  memcpy (&fullname[dirlen + 1], pattern, patlen + 1);
 # endif
 	  if (((flags & GLOB_ALTDIRFUNC)
-	       ? (*pglob->gl_stat) (fullname, &st)
-	       : __stat (fullname, &st)) == 0)
+	       ? (*pglob->gl_stat) (fullname, (struct stat *)&st)
+	       : __stat (fullname, (struct stat *)&st)) == 0)
 	    /* We found this file to be existing.  Now tell the rest
 	       of the function to copy this name into the result.  */
 	    flags |= GLOB_NOCHECK;

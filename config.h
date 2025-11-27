@@ -352,7 +352,7 @@
 #define PACKAGE "make"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "support@nexbridge.com"
+#define PACKAGE_BUGREPORT "nonstopsupport@hpe.com"
 
 #if defined (_TNS_E_TARGET)
 /* Define to the full name of this package. */
