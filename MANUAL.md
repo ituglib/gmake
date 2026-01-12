@@ -10,12 +10,12 @@ of each out of date component. This port runs in the Guardian personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 11 August 2025, was written for the 4.3g10
+This edition, last updated on 12 August 2026, was written for the 4.3g10
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
 
-Copyright &copy; 2020-2025, ITUGLIB Engineering Team. Permission is granted to
+Copyright &copy; 2020-2026, ITUGLIB Engineering Team. Permission is granted to
 copy, distribute and/or modify this document under the terms of the GNU Free
 Documentation License, Version 1.3 or any later version published by the
 Free Software Foundation; with no Invariant Sections, with the Front-Cover
@@ -134,6 +134,12 @@ the reason error code is reported.
  
 The built-in `rm` command does not support any Guardian run options.
 
+#### Suppressing Warnings
+
+Some compilers and commands always generate warnings. These can be suppressed
+using either the `--legacy-cc` command option, or by specifying a leading `_`
+in front of the command in recipes.
+
 ### Predefined Variables
 
 Many of the predefined variables in GNU Make have no effect in GMake because
@@ -206,6 +212,9 @@ processes generating `CC=1` are treated consistently with GNU Make and will
 cause the recipe to fail. The `--legacy-cc` option, or `PARAM LEGACY-CC 1`
 will cause the original GMAKE port behaviour to be used, where `CC=1` will
 always be considered an ignored warning.
+
+A command preface of `_` will also suppress `CC=1` completion codes and will
+consider those to be ignored, similar to the `-` prefix for all errors.
 
 ### Predefined Variables
 
