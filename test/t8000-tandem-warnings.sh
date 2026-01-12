@@ -129,4 +129,38 @@ test_expect_success 'retest c compile - should not run' '
 	test_cmp expecting actual
 '
 
+test_expect_success 'C compile, with warnings ignored new approach' '
+	edit_loader makefile <<-EOF > /dev/null &&
+dq!a
+a
+\$(define_delete =SPOOL)
+\$(define_add =SPOOL,spool,\$s.#$this_test)
+
+all: obj
+
+obj: csrc
+        _${CCOMPILER} /IN \$<,OUT =SPOOL,TERM \$NULL/ \$@
+        @echo Got past the compile warning without failing
+//
+EOF
+	sleep 2 &&
+	edit_loader csrc <<-EOF > /dev/null &&
+dq!a
+a
+#include <stdio.h>
+static int bob = 0;
+int main(int argc, char **argv) {
+	printf("Hello world\n");
+}
+//
+EOF
+	launch_make > actual &&
+	launch_spoolcom_delete $this_test >/dev/null &&
+	cat >expecting <<-EOF &&
+	_${CCOMPILER} /IN csrc,OUT =SPOOL,TERM \$NULL/ obj
+	Got past the compile warning without failing
+	EOF
+	test_cmp expecting actual
+'
+
 test_done
