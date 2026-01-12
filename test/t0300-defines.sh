@@ -301,7 +301,7 @@ EOF
 	SUBVOL0            \$VOL.A
 	EOF
 	cat $TEST_GUARDIAN_DIR/tacl1 | sed "1,/INFO DEFINE/d" \
-		| sed "s/^  *//g" | sed "1,\$s/\\\\[^.]*\.[^.]*\./\$VOL./g" \
+		| sed "s/^  *//g" | sed "s/^\*  *//g" | sed "1,\$s/\\\\[^.]*\.[^.]*\./\$VOL./g" \
 		> actual &&
 	test_cmp expecting actual
 '
@@ -333,7 +333,7 @@ EOF
 	RELSUBVOL1         D
 	EOF
 	cat $TEST_GUARDIAN_DIR/tacl2 | sed "1,/INFO DEFINE/d" \
-		| sed "s/^  *//g" | sed "1,\$s/\\\\[^.]*\.[^.]*\./\$VOL./g" \
+		| sed "s/^  *//g" | sed "s/^\*  *//g" | sed "1,\$s/\\\\[^.]*\.[^.]*\./\$VOL./g" \
 		> actual &&
 	test_cmp expecting actual
 '
