@@ -3,10 +3,10 @@
 VPROC_GMAKE=$(shell sh ./version.sh MAIN L01)
 
 # Set the systype flag.
-SYSTYPE_FLAG = -Wsystype=guardian -Wtarget=tns/x
+SYSTYPE_FLAG = -Wsystype=guardian -Wtarget=tns/x -Wrunnamed
 ALLOW_WARNINGS ?= 1506,161,770,262,203,272,265
 
-CFLAGS_DBG =
+CFLAGS_DBG ?=
 # Set up compiler and its flags
 CC=c99
 INCLUDES=-I. -I./glob -I/G/system/zsysdefs -I/G/system/zsutver

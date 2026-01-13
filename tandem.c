@@ -28,6 +28,9 @@
 
 #include "makeint.h"
 #include "debug.h"
+#include "filedef.h"
+#include "variable.h"
+
 #include "tandem.h"
 
 typedef struct ParamEntry_ {
@@ -534,6 +537,62 @@ static int process_echo(char **strings) {
 	return 0;
 }
 
+/**
+ * Outvar built-in. Report the contents of variables to stdout.
+ * @param strings the set of strings, null terminated.
+ * @return 0.
+ */
+static int process_outvar(char **strings) {
+	for (size_t index = 0; strings[index]; index++) {
+		char *s, *end;
+
+		if (index != 0) {
+			fputs(" ", stdout);
+		}
+		s = strings[index];
+		end = s + strlen(s);
+		if (*s == '"') {
+			if (end[-1] == '"') {
+				s++;
+				end[-1] = '\0';
+			}
+		} else if (*s == '\'') {
+			if (end[-1] == '\'') {
+				s++;
+				end[-1] = '\0';
+			}
+		}
+		struct variable *v = lookup_variable(s, strlen(s));
+		if (v) {
+			fputs(v->value, stdout);
+		}
+	}
+	fputs("\n", stdout);
+	fflush(stdout);
+	return 0;
+}
+
+/**
+ * Get the name of this process.
+ * @param name the name buffer.
+ * @param nameLength the size of the name buffer.
+ * @param remote indicates whether we want a remote name.
+ */
+static void getmyname(char *name, size_t nameLength, short remote) {
+	short pHandle[10];
+	short actualNameLength = 0;
+
+	PROCESSHANDLE_NULLIT_(pHandle);
+	PROCESSHANDLE_GETMINE_(pHandle);
+	PROCESSHANDLE_TO_FILENAME_(pHandle, name, nameLength, &actualNameLength, 0x1);
+	name[actualNameLength] = '\0';
+
+	if (! remote) {
+		char *s = strchr(name, '$');
+		memmove(name, s, strlen(s) + 1);
+	}
+}
+
 /*
  Launch a process to run the specified command...
 
@@ -580,6 +639,7 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	char buf[2048], cbuf[LINE_MAX], cmd[ZSYS_VAL_LEN_FILENAME+1];
 	short cmdLen;
 	char filename3[ZSYS_VAL_LEN_FILENAME], *bptr, *cptr;
+	char filename4[ZSYS_VAL_LEN_FILENAME];
 	char searchDefine[ZSYS_VAL_LEN_FILENAME+1];
 	char *s1ptr = NULL, *s2ptr = NULL, hometerm[ZSYS_VAL_LEN_FILENAME+1], inoutfilename[ZSYS_VAL_LEN_FILENAME+1];
 	char sethometerm[ZSYS_VAL_LEN_FILENAME+1];
@@ -593,8 +653,18 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	param_msg_type pmt;
 	zsys_ddl_smsg_def *smsg = (zsys_ddl_smsg_def *) buf;
 	zsys_ddl_smsg_procdeath_def *spdmsg = &smsg->u_z_msg.z_procdeath;
+	zsys_ddl_smsg_open_def *openmsg = (zsys_ddl_smsg_open_def *) buf;
+	zsys_ddl_receiveinformation_def receiveinfo;
 	short anyfile = -1;
 	__int32_t len32 = 0;
+	char myname[64];
+#define inv_found inv != NULL
+#define outv_found outv != NULL
+	struct variable *inv = NULL;
+	struct variable *outv = NULL;
+	short inv_file = -1;
+	short outv_file = -1;
+	char *inv_s = NULL;
 
 	strcpy(sethometerm, "");
 	snprintf(searchDefine, sizeof(searchDefine), "=%s", search_define);
@@ -671,6 +741,8 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		return process_rm(argv+1);
 	} else if (strcmp(argv[0], "echo") == 0) {
 		return process_echo(argv+1);
+	} else if (strcmp(argv[0], "outvar") == 0) {
+		return process_outvar(argv+1);
 	}
 
 	smt = (startup_msg_type *) malloc(sizeof(startup_msg_type));
@@ -706,7 +778,7 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	}
 
 	/*
-	 * Assume that /IN and /OUT are specified without any
+	 * Assume that /IN, /INV, /OUT, and /OUTV are specified without any
 	 * arguments.  And then later put in the appropriate values
 	 * if they were either specified with a value, or not
 	 * specified at all.
@@ -838,6 +910,8 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		}
 	} /* if (cmd[0] == '\\') */
 
+	getmyname(myname, sizeof(myname), remotepgm);
+
 	if (s2ptr) { /* run-options (in file, out file, etc.) */
 		if (ISDB(DB_BASIC))
 			printf("launch_proc last slash addr = 0x%x\n", s2ptr);
@@ -878,7 +952,44 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			/*
 			 * Now look at our token to see what we've got.
 			 */
-			if (!strncasecmp(bptr, "IN", strlen("IN"))) {
+			if (!strncasecmp(bptr, "INV", strlen("INV"))) {
+				/*
+				 * If (1) no more separators or (2) separator has been
+				 * nulled out or (3) a separator immediately follows
+				 * this string, then we have no infile name.
+				 */
+				if ((sepptr == NULL) || (*sepptr == '\0')
+						|| (strspn(bptr + strlen(bptr) + 1, ",/"))) {
+					printf("launch_proc INV requires a variable name\n");
+					return PROCDEATH_PREMATURE;
+				}
+
+				/* in inlen out */
+				bptr = strtok(NULL, separators);
+
+				inv = lookup_variable(bptr, strlen(bptr));
+				if (!inv) {
+					printf(
+							"launch_proc INV %s requires an existing variable name\n",
+							bptr);
+					return PROCDEATH_PREMATURE;
+				}
+				if (ISDB(DB_BASIC))
+					printf("launch_proc in = '%s' \n", bptr);
+				snprintf(inoutfilename, sizeof(inoutfilename), "%s.#INV", myname);
+				if (ISDB(DB_BASIC))
+					printf("launch_proc actual in = '%s' \n", inoutfilename);
+				error = FILENAME_TO_OLDFILENAME_(inoutfilename,
+						(short) strlen(inoutfilename), (short*) filename3);
+				if (error) {
+					printf(
+							"launch_proc FILENAME_TO_OLDFILENAME_ returned %d\n",
+							error);
+					return PROCDEATH_PREMATURE;
+				}
+				memcpy(smt->infile.whole, filename3,
+						sizeof(smt->infile.whole));
+			} else if (!strncasecmp(bptr, "IN", strlen("IN"))) {
 				in_found = 1;
 
 				/*
@@ -921,6 +1032,40 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 					memcpy(smt->infile.whole, filename3,
 							sizeof(smt->infile.whole));
 				}
+			} else if (!strncasecmp(bptr, "OUTV", strlen("OUTV"))) {
+				/*
+				 * If (1) no more separators or (2) separator has been
+				 * nulled out or (3) a separator immediately follows
+				 * this string, then we have no infile name.
+				 */
+				if ((sepptr == NULL) || (*sepptr == '\0')
+						|| (strspn(bptr + strlen(bptr) + 1, ",/"))) {
+					printf("launch_proc OUTV requires a variable name\n");
+					return PROCDEATH_PREMATURE;
+				}
+
+				/* in inlen out */
+				bptr = strtok(NULL, separators);
+
+				outv = lookup_variable(bptr, strlen(bptr));
+				if (!outv) {
+					define_variable_cname(bptr, "", o_default, 0);
+					outv = lookup_variable(bptr, strlen(bptr)); // Must succeed
+				}
+				if (ISDB(DB_BASIC))
+					printf("launch_proc out = '%s' \n", bptr);
+				snprintf(inoutfilename, sizeof(inoutfilename), "%s.#OUTV",
+						myname);
+				if (ISDB(DB_BASIC))
+					printf("launch_proc actual out = '%s' \n", inoutfilename);
+				error = FILENAME_TO_OLDFILENAME_(inoutfilename,
+						(short) strlen(inoutfilename), (short*) filename4);
+				if (error) {
+					printf("launch_proc FILENAME_TO_OLDFILENAME_ returned %d\n",
+							error);
+					return PROCDEATH_PREMATURE;
+				}
+				memcpy(smt->outfile.whole, filename4, sizeof(smt->outfile.whole));
 			} else if (!strncasecmp(bptr, "OUT", strlen("OUT"))) {
 				out_found = 1;
 				/*
@@ -1059,7 +1204,7 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		bptr = strtok(NULL, ""); /* advance past the command */
 	}
 
-	if ((!in_found) || (!out_found)) {
+	if ((!in_found && !inv_found) || (!out_found && !outv_found)) {
 		/* Get hometerminal information for setting infile and/or outfile */
 		rc = PROCESS_GETINFO_( /* phandle */, /* procfname */, /* procmax */,
 		/* proclen */, /* pri */, /* mom */,
@@ -1076,10 +1221,10 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		}
 
 		/* Now set the infile and/or outfile to the hometerm */
-		if (!in_found)
+		if (!in_found && !inv_found)
 			memcpy(smt->infile.whole, oldhome, 24);
 
-		if (!out_found)
+		if (!out_found && !outv_found)
 			memcpy(smt->outfile.whole, oldhome, 24);
 	}
 
@@ -1275,11 +1420,14 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		printf("launch_proc issuing READUPDATEX($RECEIVE)\n");
 	READUPDATEX(filenum, buf, sizeof(buf), (unsigned short *) &len);
 	while (running) {
+		short replyCode = 0;
+		short replied = 0;
 		anyfile = -1;
 		len32 = 0;
 		wrerror = AWAITIOXL(&anyfile, , &len32);
 		len = (short) len32;
 		if (anyfile == filenum) {
+			FILE_GETRECEIVEINFO_((short *)&receiveinfo);
 			if (wrerror == 6) { /* system (not user) message */
 				if (smsg->u_z_msg.z_msgnumber[0] == ZSYS_VAL_SMSG_PROCDEATH) {
 					if (ISDB(DB_BASIC))
@@ -1312,14 +1460,14 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 				} else if (smsg->u_z_msg.z_msgnumber[0] == ZSYS_VAL_SMSG_OPEN) {
 					if (ISDB(DB_BASIC))
 						printf("launch_proc OPEN received\n");
-					if ((options & LAUNCH_PROC_OUT_PARENT)
-							&& childfilenum <= 0) {
+					if ((options & LAUNCH_PROC_OUT_PARENT) && childfilenum <= 0
+							&& openmsg->z_qualifier_len == 0) {
 						if (ISDB(DB_BASIC))
 							printf("launch_proc FILE_OPEN_ initiated to %s\n",
 									olist.u_z_data.z_procname);
 						error = FILE_OPEN_(olist.u_z_data.z_procname,
 								olist.z_procname_len, &childfilenum, //
-								/* acc */, /* excl */, /* nowait */2, //
+								/* acc */, /*- excl */, /* nowait */2, //
 								/* sync */, 0x4000);
 						if (error) {
 							FILE_GETINFO_(childfilenum, &errordet);
@@ -1328,6 +1476,25 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 									olist.u_z_data.z_procname, error, errordet);
 							procrc = PROCDEATH_PREMATURE;
 							running = 0;
+						}
+					} else if (openmsg->z_qualifier_len > 0) {
+						/* This is a variable in/out */
+						openmsg->u_z_data.z_qualifier[openmsg->z_qualifier_len] = '\0';
+						if (strcmp(openmsg->u_z_data.z_qualifier, "#INV") == 0) {
+							if (ISDB(DB_BASIC))
+								printf("launch_proc FILE_OPEN_ INV received on %s\n",
+										openmsg->u_z_data.z_qualifier);
+							inv_file = receiveinfo.z_filenum;
+						} else if (strcmp(openmsg->u_z_data.z_qualifier, "#OUTV") == 0) {
+							if (ISDB(DB_BASIC))
+								printf("launch_proc FILE_OPEN_ OUTV received on %s\n",
+										openmsg->u_z_data.z_qualifier);
+							outv_file = receiveinfo.z_filenum;
+						} else {
+							if (ISDB(DB_BASIC))
+								printf("launch_proc FILE_OPEN_ received on unknown partition %s\n",
+										openmsg->u_z_data.z_qualifier);
+							replyCode = 2;
 						}
 					}
 				} else if (smsg->u_z_msg.z_msgnumber[0] == ZSYS_VAL_SMSG_CONTROL) {
@@ -1421,6 +1588,54 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 						if (ISDB(DB_BASIC))
 							printf("launch_proc TLE %d started\n", tleId);
 					}
+				} else if (anyfile != filenum) {
+					replyCode = 1; // Discard
+				} else if (receiveinfo.z_filenum == inv_file) {
+					// Process INV
+					if (inv_s == NULL) {
+						inv_s = strchr(inv->value, '\n');
+						if (!inv_s) {
+							// deal with no LF
+							inv_s = inv->value + strlen(inv->value);
+							REPLYX(inv->value, (short) (strlen(inv->value)));
+							replied = -1;
+						} else if (*inv_s) {
+							// deal with start forward to LF
+							REPLYX(inv->value, (short) (inv_s - inv->value));
+							inv_s ++;
+							replied = -1;
+						}
+					} else if (*inv_s) {
+						// deal with continuation from LF
+						char *s = strchr (inv_s, '\n');
+						if (s) {
+							// deal with continuation to LF
+							REPLYX(inv_s, (short) (s - inv_s));
+							replied = -1;
+							inv_s = s + 1;
+						} else {
+							// deal with continuation to end of string
+							REPLYX(inv_s, (short) (strlen(inv_s)));
+							replied = -1;
+							inv_s += strlen(inv_s);
+						}
+					} else {
+						// deal with no more data
+						replyCode = 1; // EOF
+					}
+				} else if (receiveinfo.z_filenum == outv_file) {
+					// Process OUTV
+					char *s = malloc(strlen(outv->value) + len + 10); // Extra space
+					buf[len] = '\0';
+					sprintf(s, "%s\n%s", outv->value, buf);
+					if (outv->value)
+						free(outv->value);
+					outv->value = s;
+					//define_variable_cname(outv->name, s, o_automatic, 0);
+					//outv = define_variable_cname(outv->name, s, o_automatic, 0);
+					if (ISDB(DB_BASIC))
+						printf("launch_proc %s is now %s\n", outv->name,
+								outv->value);
 				} else {
 					TIMER_STOP_(tleId);
 					if (ISDB(DB_BASIC))
@@ -1430,7 +1645,9 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 								"launch_proc READUPDATEX got user message preamble discarded\n");
 				}
 			}
-			REPLYX();
+			if (!replied) {
+				REPLYX(,,,, replyCode);
+			}
 			if (running) {
 				if (ISDB(DB_BASIC))
 					printf("launch_proc issuing READUPDATEX($RECEIVE)\n");
@@ -1515,6 +1732,8 @@ reference_define(char *ptr, char **string) {
 	*string = end - 1; /* backtrack 1 if we resolved stuff */
 
 	return ptr;
+#undef inv_found
+#undef outv_found
 }
 
 char *xstrdup(const char *ptr);

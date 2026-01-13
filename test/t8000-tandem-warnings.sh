@@ -90,8 +90,7 @@ EOF
 	test_cmp expecting actual
 '
 
-# Does not work in Jenkins
-test_expect_failure 'C compile, with warnings ignored legacy' '
+test_expect_success 'C compile, with warnings ignored legacy' '
 	edit_loader makefile <<-EOF > /dev/null &&
 dq!a
 a
@@ -104,6 +103,7 @@ obj: csrc
         ${CCOMPILER} /IN \$<,OUT =SPOOL,TERM \$NULL/ \$@
 //
 EOF
+	sleep 2 &&
 	edit_loader csrc <<-EOF > /dev/null &&
 dq!a
 a
