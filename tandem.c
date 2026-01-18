@@ -739,8 +739,12 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		}
 	} else if (strcmp(argv[0], "rm") == 0) {
 		return process_rm(argv+1);
+	} else if (strcmp(argv[0], "_rm") == 0) {
+		return process_rm(argv+1); // Ignore the warning
 	} else if (strcmp(argv[0], "echo") == 0) {
 		return process_echo(argv+1);
+	} else if (strcmp(argv[0], "_echo") == 0) {
+		return process_echo(argv+1); // Ignore the warning
 	} else if (strcmp(argv[0], "outvar") == 0) {
 		return process_outvar(argv+1);
 	}
@@ -1110,7 +1114,6 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 							sizeof(smt->outfile.whole));
 				}
 			} else if (!strncasecmp(bptr, "TERM", strlen("TERM"))) {
-				out_found = 1;
 				/*
 				 * If (1) no more separators or (2) separator has been
 				 * nulled out or (3) a separator immediately follows
