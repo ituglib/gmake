@@ -10,7 +10,7 @@ of each out of date component. This port runs in the Guardian personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 12 August 2026, was written for the 4.3g10
+This edition, last updated on 16 January 2026, was written for the 4.3g10
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -459,7 +459,9 @@ are all optional:
 | Option  | Argument         | Meaning                                                                      |
 | ------- | ---------------- | ---------------------------------------------------------------------------- |
 |   `IN`  | file            | The file to be used as an input file to the program. This is generally used. |
+|  `INV`  | variable        | The variable to be used as an input file to the program.                     |
 |  `OUT`  | file or spooler | The file or location to be used to capture output. This is optional.         |
+| `OUTV`  | variable        | The variable to be used to capture output from the program.                  |
 | `TERM`  | file            | The file to be used as an home terminal to the program. This is optional.    |
 |  `CPU`  | number          | The CPU on which the program will be run.                                    |
 | `NAME`  | pname           | The name of the process to be run.                                           |
@@ -469,6 +471,28 @@ The `NAME` option is always used, by default. Specifying `/NAME/` without a
 process name will use a system generated name, as would not specifying the
 option at all. `/NAME $pn1/` would create a process with the name `$pn` instead
 of a system generated name.
+
+The `INV` option allows an existing GMAKE variable to be used as input to the
+program. The actual `INV` supplied to the program is the GMAKE program itself,
+for example, `$X123.#INV`, that must be runned named in order for this option to
+be used. This option cannot be used with `IN`.
+
+The `OUTV` option allows an existing GMAKE variable, which may or may not be
+empty, to capture output from the program. The actual `OUTV` supplied to the
+program is the GMAKE program itself, for example, `$X123.#OUTV`, that must be
+named in order for this optio to be used. This option cannot be used with `OUT`.
+Content is always appended to the specified variable in the order in which
+programs using `OUTV` are executed, unlike standard GMAKE variable semantics.
+
+Note that variable value resolution occurs in recipes prior to executing
+programs so the values themselves may not be useful in recipes. However, `OUTV`
+and `INV` can be used together to pass content between Guardian programs.
+
+The specified `OUTV` variable must exist before the command is executed.
+Typically this is done as follows:
+
+    OUTPUT_VARIABLE=
+    $(EDIT) /OUTV OUTPUT_VARIABLE/  
 
 ### Special Commands
 
@@ -490,6 +514,10 @@ follows:
     CLEAR PARAM SWAPVOL
     CLEAR ASSIGN ALL
     CLEAR ASSIGN SSV0
+
+The `outvar` command dumps variable content to the standard output device that
+are modified by the `OUTV` option. This is normally used for debugging or
+diagnostics.
 
 ### Running OSS Commands
 
