@@ -10,7 +10,7 @@ of each out of date component. This port runs in the Guardian personality of
 the NonStop J-series and L-series platforms and is subject to the capabilities
 available on those platforms.
 
-This edition, last updated on 16 January 2026, was written for the 4.3g10
+This edition, last updated on 19 January 2026, was written for the 4.3g11
 version of GMake, based on GNU Make 4.3. There have been many contributors to
 GMake including Hewlett-Packard Enterprise LLC, ITUGLIB Engineering Team - part
 of Connect Inc., and Nexbridge Inc.
@@ -113,6 +113,8 @@ before being printed.
 
 The built-in `echo` command does not support any Guardian run options.
 
+`echo` ignores the `_` warning suppression prefix.
+
 #### `rm`
 
 The `rm` command removes files from a supplied set of patterns. This is more
@@ -133,6 +135,8 @@ If a file cannot be purged, whether directly specified or matched via a pattern,
 the reason error code is reported. 
  
 The built-in `rm` command does not support any Guardian run options.
+
+`rm` ignores the `_` warning suppression prefix.
 
 #### Suppressing Warnings
 
@@ -518,6 +522,8 @@ follows:
 The `outvar` command dumps variable content to the standard output device that
 are modified by the `OUTV` option. This is normally used for debugging or
 diagnostics.
+
+`outvar` ignores the `_` warning suppression prefix.
 
 ### Running OSS Commands
 
