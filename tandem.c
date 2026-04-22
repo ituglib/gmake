@@ -669,6 +669,9 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	strcpy(sethometerm, "");
 	snprintf(searchDefine, sizeof(searchDefine), "=%s", search_define);
 
+	if (strcasecmp(argv[0], "#") == 0) {
+		return 0;
+	}
 	if (strcasecmp(argv[0], "param") == 0) {
 		char *arg;
 		if (!argv[1] || !argv[2]) {
