@@ -61,6 +61,29 @@ static char *_strupr(char *string) {
 	return string;
 }
 
+/**
+ * Render a printable string.
+ * @param string the string to render.
+ * @return a pointer to a rendered string. This must be freed.
+ */
+static char *render_printable(const char *string) {
+	char *result = malloc(strlen(string) * 4);
+	char *t = result;
+
+	for (const char *s = string; *s; ) {
+		if (isprint(*s)) {
+			*t++ = *s++;
+		} else {
+			*t++ = '\\';
+			sprintf(t, "%03o", *s++);
+			t += 3;
+		}
+	}
+	*t = '\0';
+
+	return result;
+}
+
 static short get_param_msg_local(param_msg_type *pmt, short *plen) {
 	if (_num_params > 0) {
 		char *s;
@@ -774,11 +797,29 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		memcpy(smt->defaults.whole, defaultName,
 			(short)sizeof(smt->defaults.whole));
 	}
-	if (ISDB(DB_BASIC))
+	if (ISDB(DB_BASIC)) {
+		char render_buf[sizeof(*smt)];
+		char *defaults_rendered;
+		char *infile_rendered;
+		char *outfile_rendered;
+		memcpy(render_buf, smt->defaults.whole, sizeof(smt->defaults.whole));
+		render_buf[sizeof(smt->defaults.whole)] = '\0';
+		defaults_rendered = render_printable(render_buf);
+		memcpy(render_buf, smt->infile.whole, sizeof(smt->infile.whole));
+		render_buf[sizeof(smt->infile.whole)] = '\0';
+		infile_rendered = render_printable(render_buf);
+		memcpy(render_buf, smt->outfile.whole, sizeof(smt->outfile.whole));
+		render_buf[sizeof(smt->outfile.whole)] = '\0';
+		outfile_rendered = render_printable(render_buf);
+
 		printf("launch_proc get_startup_msg returned "
-				"%d, len %d, code %d, '%.16s', '%.24s', '%.24s', '%s'\n", rc,
-				slen, smt->msg_code, smt->defaults.whole, smt->infile.whole,
-				smt->outfile.whole, smt->param);
+				"%d, len %d, code %d, '%s', '%s', '%s', '%s'\n", rc,
+				slen, smt->msg_code, defaults_rendered, infile_rendered,
+				outfile_rendered, smt->param);
+		free(outfile_rendered);
+		free(infile_rendered);
+		free(defaults_rendered);
+	}
 	if (rc) {
 		printf("launch_proc get_startup_msg failed\n");
 		return PROCDEATH_PREMATURE;
@@ -793,9 +834,23 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 	memset(smt->infile.whole, ' ', sizeof(smt->infile.whole));
 	memset(smt->outfile.whole, ' ', sizeof(smt->outfile.whole));
 
-	if (ISDB(DB_BASIC))
-		printf("lauch_proc infile = '%.24s', outfile = '%.24s'\n",
-				smt->infile.whole, smt->outfile.whole);
+	if (ISDB(DB_BASIC)) {
+		char render_buf[sizeof(*smt)];
+		char *infile_rendered;
+		char *outfile_rendered;
+		memcpy(render_buf, smt->infile.whole, sizeof(smt->infile.whole));
+		render_buf[sizeof(smt->infile.whole)] = '\0';
+		infile_rendered = render_printable(render_buf);
+		memcpy(render_buf, smt->outfile.whole, sizeof(smt->outfile.whole));
+		render_buf[sizeof(smt->outfile.whole)] = '\0';
+		outfile_rendered = render_printable(render_buf);
+
+		printf("%s infile = '%s', outfile = '%s'\n", __func__,
+				infile_rendered, outfile_rendered);
+
+		free(infile_rendered);
+		free(outfile_rendered);
+	}
 
 	/* build command buffer */
 	strcpy(cbuf, "");
@@ -1234,9 +1289,10 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 			memcpy(smt->outfile.whole, oldhome, 24);
 	}
 
-	if (ISDB(DB_BASIC))
+	if (ISDB(DB_BASIC)) {
 		printf("launch_proc launching infile= '%.24s', outfile= '%.24s'\n",
 				smt->infile.whole, smt->outfile.whole);
+	}
 
 	if (bptr && *bptr) { /* must be the param-set (arg1; arg2, argn) */
 		while (*bptr == ' ')
@@ -1313,12 +1369,30 @@ int launch_proc(char *argv[], char *envp[], char *capture, size_t capture_len,
 		return PROCDEATH_PREMATURE;
 	}
 
-	if (ISDB(DB_BASIC))
+	if (ISDB(DB_BASIC)) {
+		char render_buf[sizeof(*smt)];
+		char *defaults_rendered;
+		char *infile_rendered;
+		char *outfile_rendered;
+		memcpy(render_buf, smt->defaults.whole, sizeof(smt->defaults.whole));
+		render_buf[sizeof(smt->defaults.whole)] = '\0';
+		defaults_rendered = render_printable(render_buf);
+		memcpy(render_buf, smt->infile.whole, sizeof(smt->infile.whole));
+		render_buf[sizeof(smt->infile.whole)] = '\0';
+		infile_rendered = render_printable(render_buf);
+		memcpy(render_buf, smt->outfile.whole, sizeof(smt->outfile.whole));
+		render_buf[sizeof(smt->outfile.whole)] = '\0';
+		outfile_rendered = render_printable(render_buf);
+
 		printf("launch_proc sent get_startup_msg, "
-				"len %d, code %d, '%.16s', '%.24s', '%.24s', '%s'\n",
+				"len %d, code %d, '%s', '%s', '%s', '%s'\n",
 				sizeof(startup_msg_type) - sizeof(smt->param) + index,
-				smt->msg_code, smt->defaults.whole, smt->infile.whole,
-				smt->outfile.whole, smt->param);
+				smt->msg_code, defaults_rendered, infile_rendered,
+				outfile_rendered, smt->param);
+		free(outfile_rendered);
+		free(infile_rendered);
+		free(defaults_rendered);
+	}
 	wrerror = WRITEREADX(filenum, (char *) smt,
 			(short) (sizeof(startup_msg_type) - sizeof(smt->param) + index),
 			sizeof(startup_msg_type), (unsigned short *) &countread);
